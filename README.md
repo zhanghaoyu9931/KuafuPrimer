@@ -32,28 +32,29 @@ File tree:
 ├── requirements_conda.txt
 ├── requirements_pip.txt
 ├── classify_seqs.sh
-├── DEcoPrimer.py
-├── EcoPrimerFuncs.py
+├── KuafuPrimer.py
+├── KuafuPrimerFuncs.py
 ├── Insilico_eva_primers.py
 └── Screen_best_PP.py
 ```
 
-We provide two ways to use the DEcoPrimer tool: use image from Docker Hub or use repository from GitHub.
+We provide two ways to use the KuafuPrimer tool: use image from Docker Hub or use repository from GitHub.
 
-###### How to use EcoPrimer from GitHub
+###### How to use KuafuPrimer from GitHub
 
 1. Download the program:
    ```powershell
-   git clone https://github.com/zhanghaoyu9931/DEcoPrimer.git
+   git clone https://github.com/zhanghaoyu9931/KuafuPrimer.git
    ```
 2. You can configure the operating environment (please create new environment to avoid unnecessary trouble) by using:
    ```powershell
-   1. conda create -n my_env_name python=3.8.12
+   1. conda create -n my_env_name python=3.9
    2. source activate my_env_name
    3. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
+   4. you may need to install **torch==1.12.0+cu113** manually from https://pytorch.org/get-started/previous-versions/
    ```
 
-###### How to use EcoPrimer from  Docker Hub
+###### How to use KuafuPrimer from  Docker Hub
 
 1. Pull the dryinhc/ipev_v1 image from Docker Hub. Open a terminal window and run the following command:
 

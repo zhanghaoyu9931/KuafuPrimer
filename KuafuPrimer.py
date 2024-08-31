@@ -10,7 +10,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
 from tqdm import tqdm
-from EcoPrimerFuncs import *
+from KuafuPrimerFuncs import *
 
 
 def blast_to_silvaRef(input_fna, output_txt):
