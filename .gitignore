@@ -1,0 +1,8 @@
+__pycache__
+
+## 1. Ignore all temperate files ##
+DimerAndHairpin_exam
+output/*
+
+## 2. Ignore all processed SILVA data ##
+Model_data/Silva_ref_data/*

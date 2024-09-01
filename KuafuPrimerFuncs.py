@@ -6,6 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
+from tqdm import tqdm
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -343,9 +344,9 @@ def primer_design_from_MAS(
 
     potential_primers = []
     for primer_lens in primer_lens_list:
-        for start_pos in range(
+        for start_pos in tqdm(range(
             0, pos_conserved.shape[0] + 1 - primer_lens, step_search
-        ):  # 1230: step_search加速搜索
+        )):  # 1230: step_search加速搜索
             end_pos = start_pos + primer_lens
             primer_now = pos_conserved.iloc[start_pos:end_pos, :].copy()
             primer_now.reset_index(inplace=True, drop=True)
@@ -564,6 +565,7 @@ def design_primer(
     SILVA_set_pred_16sDeepSeg=None,
     rand_seed=None,  # 为了保证各个region设计的用的seqs一致（in-silico 1 genus验证）
     rm_tmp_files=True, # 是否删除中间文件
+    step_search=1, # 默认每隔一个位置搜索一次，这样更细得到的候选引物更多
 ):
     # 20240103：如果输入num_every_spe < 1，按照每个genus取一定比例
     if num_every_spe < 1:
@@ -760,6 +762,7 @@ def design_primer(
             mismatch_cutoff=mismatch_cutoff,
             primer_lens_list=primer_lens_list,
             forward_reverse=fr,
+            step_search=step_search # 引物设计的时候每隔多少bp选择一个candidate primer
         )
 
         return fr_primer_df

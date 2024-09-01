@@ -163,6 +163,7 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     df_this_evi_pri_means = df_this_evi.iloc[:, :-2].mean(
         axis=0
     )  # 最后两列是genus和genus number
+    print('AAAA', df_this_evi)
     best_pri_index = df_this_evi_pri_means.argmax()
     best_pri_nm, best_pri_pcr_res = (
         df_this_evi_pri_means.index[best_pri_index],
@@ -213,7 +214,7 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     # 1124：组合并生成一个和uni primer拼接在一起的列表，只是为了后面的比较方便
     top_k = 5
     uni_pris_compare = pd.read_excel(
-        "/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/data/primers_sequencing_bacdiveComp.xlsx"
+        "Model_data/Universal_primers/primers_sequencing_bacdiveComp.xlsx"
     )
     best_pri_pair_info = []
     df_this_evi_pri_info_designed = df_this_evi_pri_info[

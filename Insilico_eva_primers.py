@@ -262,9 +262,9 @@ def otu_and_class(fa, minsize, randid):
     cmd3 = f"usearch -unoise3 {uni_fa} -zotus {zotu_fa}"
 
     # Classify every amplicon
-    silva_template = "/data3/hyzhang/16sDeepSeg_primer_2023/data/silva_v138.1_nr/silva.nr_v138_1.align"
+    silva_template = "./Model_data/Silva_ref_data/silva.nr_v138_1.align"
     taxo_ref = (
-        "/data3/hyzhang/16sDeepSeg_primer_2023/data/silva_v138.1_nr/silva.nr_v138_1.tax"
+        "./Model_data/Silva_ref_data/silva.nr_v138_1.tax"
     )
 
     cmd4 = f'mothur "#classify.seqs(fasta={fa},reference={silva_template},taxonomy={taxo_ref},cutoff=50,processors=4)"'
@@ -492,10 +492,12 @@ def main_func(
         pcr_match(ref_fa=ref_fa, primer_txt=primer_txt, K=K, output=output)
 
         # after pcr
+        
         align_df = parse_pcr_ali_res(output)
     elif amplicon_method == "haoyu":
         # 20231224: 换用blastn来进行比对，自己确定amplicon是否匹配
         # 构建blast database
+        print(ref_df_selectedGenus.head())
         selectedGenus_recs = [
             SeqRecord(
                 seq=Seq(ref_df_selectedGenus.loc[i, "16s_rna"]),
@@ -683,7 +685,7 @@ def parse_args():
     parser.add_argument(
         "--primers_forEva", type=str, help="The designed primers to be evaluated."
     )
-    parser.add_argument("--amplicon_method", default="pcr_match", type=str, help=".")
+    parser.add_argument("--amplicon_method", default="haoyu", type=str, help=".")
     parser.add_argument(
         "--sequencing_error",
         default="no",  # NextSeq_550
@@ -703,7 +705,7 @@ def parse_args():
     parser.add_argument(
         "--additional_primers",
         type=str,
-        default="data/primers_sequencing_bacdiveComp.xlsx",
+        default="Model_data/Universal_primers/primers_sequencing_bacdiveComp.xlsx",
         help="User can add their own primers for the comparison.",
     )
     parser.add_argument(
@@ -717,7 +719,7 @@ def parse_args():
         "--rand_seed", type=int, default=99419, help="rand_seed for choosing seqs."
     )
     parser.add_argument(
-        "--num_every_spe", type=int, default=100, help="num for choosing seqs."
+        "--num_every_spe", type=int, default=20, help="num for choosing seqs."
     )
     # 20231107: 加入参数允许指定用于比较的参考数据库
     parser.add_argument(

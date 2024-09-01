@@ -1,6 +1,6 @@
  ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-V0.0.1-brightgreen) ![license](https://img.shields.io/badge/license-GPL--v3-blue)
 
-## DEcoPrimer: a deep learning-based algorithm for designing optimal 16S rRNA gene amplicon sequencing primer for specific bacterial ecosystem
+## KuafuPrimer: a deep learning-based algorithm for designing optimal 16S rRNA gene amplicon sequencing primer for specific bacterial ecosystem
 
   ![0](./pic/logo.png)
 
@@ -15,7 +15,7 @@
 
 ## Introduction
 
-* [ ] DEcoPrimer. It is built on **Python3.8.12** , **Pytorch 1.12.0**.
+* [ ] KuafuPrimer. It is built on **Python3.8.12** , **Pytorch 1.12.0**.
 
 ## Installation
 
@@ -51,8 +51,8 @@ We provide two ways to use the KuafuPrimer tool: use image from Docker Hub or us
    1. conda create -n my_env_name python=3.9
    2. source activate my_env_name
    3. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
-   4. you may need to install **torch==1.12.0+cu113** manually from https://pytorch.org/get-started/previous-versions/
    ```
+   Notably, you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
 
 ###### How to use KuafuPrimer from  Docker Hub
 
@@ -92,7 +92,7 @@ Here we privide a pipeline to process metagenomic raw data, Feel free to use you
 bash pipeline.sh
 ```
 
-This pipeline will output ####
+This pipeline will output [TODO]
 
 ###### Design ecosystem-specific primer pair.
 
@@ -108,6 +108,8 @@ There are some tool requirements before running the program：
 1. [mothur](https://mothur.org/) (version == 1.48.0)
 2. [muscle](https://drive5.com/muscle) (version == 5.1)
 3. [PrimerMatch](https://edwardslab.bmcb.georgetown.edu/software/PrimerMatch.html) (version == 1.0.0)
+4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
+5. [MFEprimer](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 3.2.6)
 
 To design the ecosystem specific primer pairs, run:
 
@@ -117,7 +119,7 @@ demo_input=input/demo_input_EcoPrimer.csv
 demo_output=output/demo_output_EcoPrimer
 
 # run the program
-python DEcoPrimer.py \
+python KuafuPrimer.py \
     --input $demo_input \ # Input file
     --out_root $demo_output \ # Output dir
     --input_type 'metagenomic' \ # Input data type
@@ -142,7 +144,7 @@ demo_input=input/relevant_genera_profile_input/demo_input_EcoPrimer_ge_profile.c
 demo_output=output/demo_output_EcoPrimer_ge_profile
 
 # run the program
-python DEcoPrimer.py \
+python KuafuPrimer.py \
     --input $demo_input \ # Input file
     --out_root $demo_output \ # Output dir
     --input_type 'genera_profiling' \ # Input data type

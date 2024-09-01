@@ -75,6 +75,7 @@ def design_pri_vregion(
     extend_bp_num,
     rand_seed,
     rm_tmp_files,
+    step_search,
 ):
     # 使用fastPrimer to design primers
     if ("v9" in vv) or ("v1" in vv):
@@ -98,6 +99,7 @@ def design_pri_vregion(
         SILVA_set_pred_16sDeepSeg=SILVA_set_pred_16sDeepSeg,
         rand_seed=rand_seed,
         rm_tmp_files=rm_tmp_files,
+        step_search=step_search,
     )
 
 
@@ -116,6 +118,7 @@ def primer_design_main(
     thread_num=10,
     rand_seed=None,
     rm_tmp_files=True,
+    step_search=1,
 ):
     ### 第一部分：处理sample文件，获取里面有哪些genus
     # 数据存放的output路径
@@ -178,6 +181,7 @@ def primer_design_main(
                 extend_bp_num,
                 rand_seed,
                 rm_tmp_files,
+                step_search,
             ),
         )
     # end of this procedure
@@ -220,6 +224,12 @@ def parse_args():
         default=20,
         help="Number of extensive bp that will be included to design primer.",
     )
+    parser.add_argument(
+        "--step_search",
+        type=int,
+        default=1,
+        help="Number of step size for designing primer.",
+    )
 
     # parameters for primer lens range.
     parser.add_argument(
@@ -230,7 +240,7 @@ def parse_args():
     parser.add_argument(
         "--SILVA_set_pred_16sDeepSeg",
         type=str,
-        default="Model_data/Silva_ref_data/SILVA_set_segmentation_16sDeepSeg.csv",
+        default="Model_data/Silva_ref_data/SILVA_set_segmentation_DeepAnno16.csv", # 要看一下是不用rightID的版本
         help="Reference dataset 1.",
     )
     parser.add_argument(
@@ -274,6 +284,7 @@ if __name__ == "__main__":
     extend_bp_num = args.extend_bp_num
     num_every_spe = args.num_every_spe  # 1105加上的
     input_type = args.input_type
+    step_search = args.step_search
 
     lens_min, lens_max = args.primer_lens_range.split(",")
     primer_lens_list = [i for i in range(int(lens_min), int(lens_max))]
@@ -315,12 +326,13 @@ if __name__ == "__main__":
         thread_num=thread_num,
         rand_seed=rand_seed,
         rm_tmp_files=rm_tmp_files,
+        step_search=step_search, # 20240831: 每隔多少位置提取一个candidate primer
     )
     os.system("rm ./*mothur*")
     end_time = datetime.datetime.now()
 
     with open(f"{output}/log_file.txt", "w") as log_file:
         print(
-            f"DEcoPrimer designing procedure running time: {end_time - start_time}",
+            f"KuafuPrimer designing procedure running time: {end_time - start_time}",
             file=log_file,
         )

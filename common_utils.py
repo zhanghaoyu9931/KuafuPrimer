@@ -26,7 +26,7 @@ degenerate_base_table = {
     "D": ["A", "G", "T"],
 }
 blast_db_temp_dir = (
-    "/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/tools/temp_blastdb"
+    "output/temp" # 生成的一些中间文件放哪里
 )
 
 
@@ -121,7 +121,7 @@ def parse_blastTxt(blast_txt="/data3/hyzhang/ont/16s_RNA_seg/res/blast_res/query
 def get_PP_position_Ecoli_K12(
     f_pri,
     r_pri,
-    db="/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/data/ecoli_db_K12/Ecoli_K12",
+    db="Model_data/Ecoli_K12/Ecoli_K12",
 ):
     rand_int = random.randint(9931, 99419)
     temp_dir = f"temp_align_{rand_int}"
@@ -134,13 +134,13 @@ def get_PP_position_Ecoli_K12(
     with open(f"./{temp_dir}/temp_al.fna", "w") as f:
         SeqIO.write(records, f, "fasta")
 
-    blast_cmd(
-        f"./{temp_dir}/temp_al.fna", db=db, out_path=f"./{temp_dir}/temp_blast.txt"
-    )
-    blast_df = parse_blastTxt(blast_txt=f"./{temp_dir}/temp_blast.txt")
-
-    info_t = {}
     try:
+        blast_cmd(
+            f"./{temp_dir}/temp_al.fna", db=db, out_path=f"./{temp_dir}/temp_blast.txt"
+        )
+        blast_df = parse_blastTxt(blast_txt=f"./{temp_dir}/temp_blast.txt")
+
+        info_t = {}
         for pri_ty in ["forward", "reverse"]:
             df_ = blast_df[blast_df["query_acc.ver"] == pri_ty].reset_index(drop=True)
             ## TODO: 可能还要加入，使得blast的序列长度至少15
