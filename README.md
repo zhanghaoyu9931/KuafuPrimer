@@ -1,6 +1,6 @@
  ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-V0.0.1-brightgreen) ![license](https://img.shields.io/badge/license-GPL--v3-blue)
 
-## KuafuPrimer: Deep learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
+## KuafuPrimer: [**Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities**]()
 
   ![0](./pic/logo.png)
 
@@ -15,7 +15,7 @@
 
 ## Introduction
 
-* [ ] KuafuPrimer. It is built on **Python3.8.12** , **Pytorch 1.12.0**.
+KuafuPrimer is a machine learning-aided method that learns community characteristics from several samples to design 16S rRNA gene primers with minimal bias for microbial communities. It is built on **Python 3.9.0**,  **Pytorch 1.12.0**.
 
 ## Installation
 
@@ -38,7 +38,7 @@ File tree:
 └── Screen_best_PP.py
 ```
 
-We provide two ways to use the KuafuPrimer tool: use image from Docker Hub or use repository from GitHub.
+We provide two ways to use the KuafuPrimer tool: use repository from GitHub or use the GUI.
 
 ###### How to use KuafuPrimer from GitHub
 
@@ -57,7 +57,7 @@ We provide two ways to use the KuafuPrimer tool: use image from Docker Hub or us
 
    Notably, you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
 
-###### How to use GUI version of EcoPrimer
+###### How to use GUI version of KuafuPrimer
 
 TODO YXW: ######
 
@@ -65,7 +65,7 @@ TODO YXW: ######
 
 ###### A pipeline for preprocessing the metagenomic data of the studied environment.
 
-Here we privide a pipeline to process metagenomic raw data, Feel free to use your own familiar metagenomic processing flow instead. This pipeline requires `prinseq-lite; KneadData; bowtie2; sortMeRna` to be installed before:
+Here we privide a pipeline to process metagenomic raw data, please feel free to use your own familiar metagenomic processing workflow instead. This pipeline requires `prinseq-lite; KneadData; bowtie2; sortMeRna` to be installed before:
 
 1. [prinseq-lite](https://github.com/uwb-linux/prinseq) (version == 0.20.4)
 2. [KneadData](https://github.com/biobakery/kneaddata#kneaddata-user-manual) (version == 0.12.0)
@@ -73,13 +73,20 @@ Here we privide a pipeline to process metagenomic raw data, Feel free to use you
 4. [Usearch](http://www.drive5.com/usearch/) (version == 11.0)
 5. [SortMeRNA](https://bioinfo.univ-lille.fr/sortmerna/sortmerna.php) (version == 4.3.6)
 
-`/raw_seqs/example_1.fastq` and `./raw_seqs/example_1.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process are recorded in `metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
+`./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
 
-```bash
-bash pipeline.sh
+```powershell
+bash Metagenomic_preprocessing/pipeline_metagenomic.sh \
+  ./input \ # directory of metagenomic files
+  .R1.raw.fastq.gz .R2.raw.fastq.gz \ # suffix of paired-end data
+  ./input/metagenomic_id_list.txt \ # id list
+
+python process_after_pipeline.py \
+  --metagenomic_dir ./input \ # directory of metagenomic files
+  --id_list ./input/metagenomic_id_list.txt \ # id list
 ```
 
-This pipeline will output [TODO]
+This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance table of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps.
 
 ###### Design ecosystem-specific primer pair.
 
@@ -98,32 +105,7 @@ There are some tool requirements before running the program：
 4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
 5. [MFEprimer](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 3.2.6)
 
-To design the ecosystem specific primer pairs, run:
-
-```powershell
-# set the input and output path
-demo_input=input/demo_input_EcoPrimer.csv
-demo_output=output/demo_output_EcoPrimer
-
-# run the program
-python KuafuPrimer.py \
-    --input $demo_input \ # Input file
-    --out_root $demo_output \ # Output dir
-    --input_type 'metagenomic' \ # Input data type
-    --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \ # The target V-regions.
-    --extend_bp_num 50 \ # Number of extensive bp that will be included to design primer.
-    --num_every_spe 5 \ # Number of selected seqs for every genus.
-    --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
-
-```
-
-The input csv file contains three columns:
-
-* `srr_id`: the accession number of metagenomic samples used to design the primer pairs.
-* `Single_end_file`: the single-end data of the samples after preprocessing procedures described before.
-* `Pair_end_file`: the single-end data of the samples after preprocessing procedures described before.
-
-To design the ecosystem specific primer pairs directly from the relevant genera profiling of the studied environment, you need to provide a csv file containing the relevant genera profiling as `demo_input_EcoPrimer_ge_profile.csv` and run:
+To design the ecosystem specific primer pairs from the relevant genera profiling of the studied environment, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
 
 ```
 # set the input and output path
@@ -141,9 +123,11 @@ python KuafuPrimer.py \
     --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
 ```
 
-The designed primers targeting every V-regions will be in the `$demo_output` directory.
+Notably, the input relevant genera profiling file could be generated through the pipeline mentioned before, or provided by users themselves.
 
-###### In-silico PCR result of the designed primer pair.
+The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
+
+###### In-silico PCR of the designed primer pairs and screen for the primer with minimal bias for the studied communities.
 
 To evaluate the perfromance of designed primer pairs by in-silico PCR and screen out the optimal primer pair for the studied ecosystem, run:
 
@@ -167,7 +151,7 @@ python Screen_best_PP.py \
 
 ```
 
-The input for `envi_forEva` and `primers_forEva` is the output directory of primer design  procedure. This program will output the designed ecosystem specific primer pair, the selected V-region and in-silico PCR accuracy of it:
+The input for `envi_forEva` and `primers_forEva` is the output directory of primer design  procedure. This program will output the designed communities specific primer pair, the selected V-region and in-silico PCR accuracy of it:
 
 ```
 Designed ecosystem specific primer pair for output/demo_PCR_output is ['GYCACAYTGGRACTGAGA', 'GGACTACCAGGGTATCTAA'], targeting v3v4 V-region, with 97.27% in-silico PCR amplicon accuracy.
@@ -175,7 +159,7 @@ Designed ecosystem specific primer pair for output/demo_PCR_output is ['GYCACAYT
 
 The detailed in-silico PCR performance and meta-information of every condidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory.
 
-###### Use 16sDeepSeg to demarcate 16s rRNA gene sequences.
+###### Use DeepAnno16 to demarcate 16s rRNA gene sequences.
 
 ```powershell
 # 1. Download the trained 16sDeepSeg modol from [http:***].
