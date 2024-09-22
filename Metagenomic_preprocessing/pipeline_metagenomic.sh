@@ -1,4 +1,4 @@
-#### 20231108: 修改流程，现在直接使用宏基因组流程找到相对丰度矩阵，再做taxaid的对照
+#### Pipeline for metagenomic data processing
 Human_DB=/data1/hyzhang/Projects/16sDeepSeg_summary/Evi_specific_primers_database/Primer_evaluation_fromMetagenomeData/data/GRCh38/G38
 silva_db_kraken2=/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/Model_data/Silva_ref_data/silva_db_kraken2
 ncbi_db_kraken2=/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/Model_data/ncbiStandard_db_kraken2
@@ -26,7 +26,6 @@ t_ge_num_silva=10
 ## start pipeline
 for demo_nm in `cat $metalistfile`
 do
-    # 解压缩源文件 & 创建存放路径
     out_dir_this_srr=$clean_out'/'$demo_nm
     mkdir -p $out_dir_this_srr
 
@@ -42,7 +41,7 @@ do
 
         if [ "${fq1_ori##*.}" == "gz" ]; then
             echo "${fq1_ori##*.}"
-            # 解压缩
+            # Decompose the gz files.
             echo "Decompose the gz files!"
             gunzip -c $fq1_ori > $fq1
             gunzip -c $fq2_ori > $fq2
@@ -54,14 +53,12 @@ do
             mv $fq2_ori $fq2
         fi
 
-        # 20231103: 使用awk处理文件的头部
-        # awk '{if(NR % 4 == 1 || NR % 4 == 3){if($0 !~ /\/1$/){sub("2:N:0:", "1:N:0:"); gsub(" ", "#"); $0 = $0 "/1"; print}else{print}}else{print}}' $fq1 > ${fq1}.temp
-        # awk '{if(NR % 4 == 1 || NR % 4 == 3){if($0 !~ /\/2$/){sub("2:N:0:", "1:N:0:"); gsub(" ", "#"); $0 = $0 "/2"; print}else{print}}else{print}}' $fq2 > ${fq2}.temp
+        # Normalize the reads header to /1 and /2 using awk.
         awk '{if(NR % 4 == 1 || NR % 4 == 3){if($0 !~ /\/1$/){sub("2:N:0:", "1:N:0:"); split($0, fields, " "); $0 = fields[1] "/1"; print}else{print}}else{print}}' $fq1 > ${fq1}.temp
         awk '{if(NR % 4 == 1 || NR % 4 == 3){if($0 !~ /\/2$/){sub("2:N:0:", "1:N:0:"); split($0, fields, " "); $0 = fields[1] "/2"; print}else{print}}else{print}}' $fq2 > ${fq2}.temp
         mv "${fq1}.temp" "$fq1"
         mv "${fq2}.temp" "$fq2"
-        # 20231123: 使用repair.sh修复文件中没法配对reads得问题
+        # Use repair.sh to solve the unmathed reads in -1 and -2 files.
         $repair_sh in1=$fq1 in2=$fq2 out=${fq1}.temp out2=${fq2}.temp outs=${fq1}.single.fq
         mv "${fq1}.temp" "$fq1"
         mv "${fq2}.temp" "$fq2"
@@ -163,9 +160,3 @@ do
     rm $out_dir_this_srr/$demo_nm'_step3'*'classified'*'.fq' $out_dir_this_srr/$demo_nm'_extraBacteria'*'.fq' $out_dir_this_srr/$demo_nm'_step3.5_ExtraBac_unclassified'*'.fq'
     rm $out_dir_this_srr/$demo_nm*'_ot.txt'
 done
-
-
-#### reference github ####
-
-## kraken2 Tools: downstream analysis file for kraken2
-# https://github.com/jenniferlu717/KrakenTools

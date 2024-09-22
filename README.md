@@ -2,7 +2,7 @@
 
 ## KuafuPrimer: [**Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities**]()
 
-  ![0](./pic/logo.png)
+![0](./pic/logo.png)
 
 ## Contents
 
@@ -63,31 +63,6 @@ TODO YXW: ######
 
 ## Quickstart:
 
-###### A pipeline for preprocessing the metagenomic data of the studied environment.
-
-Here we privide a pipeline to process metagenomic raw data, please feel free to use your own familiar metagenomic processing workflow instead. This pipeline requires `prinseq-lite; KneadData; bowtie2; sortMeRna` to be installed before:
-
-1. [prinseq-lite](https://github.com/uwb-linux/prinseq) (version == 0.20.4)
-2. [KneadData](https://github.com/biobakery/kneaddata#kneaddata-user-manual) (version == 0.12.0)
-3. [Flash](https://ccb.jhu.edu/software/FLASH/) (version == 1.2.11)
-4. [Usearch](http://www.drive5.com/usearch/) (version == 11.0)
-5. [SortMeRNA](https://bioinfo.univ-lille.fr/sortmerna/sortmerna.php) (version == 4.3.6)
-
-`./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
-
-```powershell
-bash Metagenomic_preprocessing/pipeline_metagenomic.sh \
-  ./input \ # directory of metagenomic files
-  .R1.raw.fastq.gz .R2.raw.fastq.gz \ # suffix of paired-end data
-  ./input/metagenomic_id_list.txt \ # id list
-
-python process_after_pipeline.py \
-  --metagenomic_dir ./input \ # directory of metagenomic files
-  --id_list ./input/metagenomic_id_list.txt \ # id list
-```
-
-This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance table of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps.
-
 ###### Design ecosystem-specific primer pair.
 
 User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_reference_files/) dataset for taxonomic classification using mothur tool. These files should be saved as:
@@ -123,9 +98,7 @@ python KuafuPrimer.py \
     --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
 ```
 
-Notably, the input relevant genera profiling file could be generated through the pipeline mentioned before, or provided by users themselves.
-
-The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
+Notably, the input relevant genera profiling file could be generated through the [pipeline](#a-pipeline-for-preprocessing-the-metagenomic-data-of-the-studied-environment.) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
 
 ###### In-silico PCR of the designed primer pairs and screen for the primer with minimal bias for the studied communities.
 
@@ -159,6 +132,42 @@ Designed ecosystem specific primer pair for output/demo_PCR_output is ['GYCACAYT
 
 The detailed in-silico PCR performance and meta-information of every condidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory.
 
+## Reproduce results in the publication
+
+Here we provide the scripts for reproducing the results of our paper:
+
+```
+16sDeepSeg_train_test.ipynb # code for training and evaluation of 16sDeepSeg module
+DataProcess_and_InsilicoEvaluation.ipynb # code for preprocessing SILVA dataset and in-silico evaluation
+ 
+```
+
+## Optional function
+
+###### A pipeline for preprocessing the metagenomic data of the studied environment.
+
+Here we privide a pipeline to process metagenomic raw data, please feel free to use your own familiar metagenomic processing workflow instead. This pipeline requires some tools to be installed before:
+
+1. [prinseq-lite](https://github.com/uwb-linux/prinseq) (version == 0.20.4)
+2. [KneadData](https://github.com/biobakery/kneaddata#kneaddata-user-manual) (version == 0.12.0)
+3. [Usearch](http://www.drive5.com/usearch/) (version == 11.0)
+4. [SortMeRNA](https://bioinfo.univ-lille.fr/sortmerna/sortmerna.php) (version == 4.3.6)
+
+`./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
+
+```powershell
+bash Metagenomic_preprocessing/pipeline_metagenomic.sh \
+  ./input \ # directory of metagenomic files
+  .R1.raw.fastq.gz .R2.raw.fastq.gz \ # suffix of paired-end data
+  ./input/metagenomic_id_list.txt \ # id list
+
+python process_after_pipeline.py \
+  --metagenomic_dir ./input \ # directory of metagenomic files
+  --id_list ./input/metagenomic_id_list.txt \ # id list
+```
+
+This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance table of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps.
+
 ###### Use DeepAnno16 to demarcate 16s rRNA gene sequences.
 
 ```powershell
@@ -171,17 +180,7 @@ python 16sDeepSeg/module_output.py -c 16sDeepSeg/config_test.json -r Model_data/
 
 There will be two files in the output directory: `16sDeepSeg_running_time.txt` records the running time of this procedure, `demo_output_16sDeepSeg.csv` is the 16sDeepSeg output file.
 
-> If you want to design ecosystem specific primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the 16sDeepSeg module to demarcate your sequences and afterwards run the design and in-silico PCR procedures.
-
-## Reproduce results in the publication
-
-Here we provide the scripts for reproducing the results of our paper:
-
-```
-16sDeepSeg_train_test.ipynb # code for training and evaluation of 16sDeepSeg module
-DataProcess_and_InsilicoEvaluation.ipynb # code for preprocessing SILVA dataset and in-silico evaluation
- 
-```
+> If you want to design ecosystem specific primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the 16sDeepSeg module to demarcate your sequences and afterwards run the design and in-silico PCR procedures
 
 ## Citation
 
@@ -193,4 +192,4 @@ If you have any questions, please don't hesitate to ask me: zhanghaoyu9931@pku.e
 
 ## License
 
-The source code of IPEV is distributed as open source under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html) , the IPEV program and all datasets  also can be freely available at  [zhulab homepage](https://cqb.pku.edu.cn/zhulab/info/1006/1156.htm)
+The source code of IPEV is distributed as open source under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html) , the KuafuPrimer program and all datasets  also can be freely available at  [zhulab homepage](https://cqb.pku.edu.cn/zhulab/info/1006/1156.htm)
