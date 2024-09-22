@@ -70,7 +70,7 @@ User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_refer
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
 2. `Model_data/Silva_ref_data/silva.nr_v138_1.tax`
 
-Other SILVA dataset files we have processed before need to be downloaded from "Zenodo dataset", and put them in the directory `Model_data/Silva_ref_data/`.The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
+Other SILVA dataset files we have processed before need to be downloaded from "Zenodo dataset", and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
 
 There are some tool requirements before running the program：
 
@@ -98,7 +98,7 @@ python KuafuPrimer.py \
     --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
 ```
 
-Notably, the input relevant genera profiling file could be generated through the [pipeline](#a-pipeline-for-preprocessing-the-metagenomic-data-of-the-studied-environment.) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
+Notably, the input relevant genera profiling file could be generated through the [pipeline](#Optional-function) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
 
 ###### In-silico PCR of the designed primer pairs and screen for the primer with minimal bias for the studied communities.
 
