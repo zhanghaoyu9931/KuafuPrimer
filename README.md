@@ -171,16 +171,16 @@ This pipeline will output the processed files of the metagenomic data in `./inpu
 ###### Use DeepAnno16 to demarcate 16s rRNA gene sequences.
 
 ```powershell
-# 1. Download the trained 16sDeepSeg modol from [http:***].
-# 2. Put the model.pth file in "Model_data/16sDeepSeg_publicated_model/model.pth".
-# 3. Run 16sDeepSeg to demarcate the example file:
-python 16sDeepSeg/module_output.py -c 16sDeepSeg/config_test.json -r Model_data/16sDeepSeg_publicated_model/model.pth --input input/demo_input_16sDeepSeg.csv --output output/demo_output_16sDeepSeg.csv
+# 1. Download the trained DeepAnno16 modol from [http:***].
+# 2. Put the model.pth file in "Model_data/DeepAnno16_publicated_model/model.pth".
+# 3. Run DeepAnno16 to demarcate the example file:
+python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/DeepAnno16_publicated_model/model.pth --input input/demo_input_DeepAnno16.csv --output output/demo_output_DeepAnno16.csv
 
 ```
 
-There will be two files in the output directory: `16sDeepSeg_running_time.txt` records the running time of this procedure, `demo_output_16sDeepSeg.csv` is the 16sDeepSeg output file.
+There will be two files in the output directory: `DeepAnno16_running_time.txt` records the running time of this procedure, `demo_output.csv` is the DeepAnno16 output file.
 
-> If you want to design ecosystem specific primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the 16sDeepSeg module to demarcate your sequences and afterwards run the design and in-silico PCR procedures
+> If you want to design ecosystem specific primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the DeepAnno16 module to demarcate your sequences and afterwards run the design and in-silico PCR procedures
 
 ## Citation
 
