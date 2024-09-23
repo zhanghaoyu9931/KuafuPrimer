@@ -56,14 +56,15 @@ File tree:
    Notably, you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
 
 ###### Dependencies
+
 User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_reference_files/) dataset for taxonomic classification using mothur tool. These files should be saved as:
 
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
 2. `Model_data/Silva_ref_data/silva.nr_v138_1.tax`
 
-Other SILVA dataset files we have processed before need to be downloaded from "Zenodo dataset", and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
+Other dataset files the KuafuPrimer requires are provided in Zenodo website, and user needs to download and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
 
-There are some tool requirements before running the program：
+There are some tool requirements before running the KuafuPrimer：
 
 1. [mothur](https://mothur.org/) (version == 1.48.0)
 2. [muscle](https://drive5.com/muscle) (version == 5.1)
@@ -71,10 +72,10 @@ There are some tool requirements before running the program：
 4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
 5. [MFEprimer](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 3.2.6)
 
-
 ## Quickstart:
 
 ###### Design ecosystem-specific primer pair.
+
 To design the ecosystem specific primer pairs from the relevant genera profiling of the studied environment, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
 
 ```

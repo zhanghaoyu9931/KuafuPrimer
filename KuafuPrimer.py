@@ -302,11 +302,11 @@ if __name__ == "__main__":
     # read 16sDeepSeg demarcation results
     pred_16sDeepSeg_df = pd.read_csv(args.SILVA_set_pred_16sDeepSeg)
     pred_16sDeepSeg_df.rename(
-        columns={"id": "silva_id_wrong"}, inplace=True
-    )  # TODO：后面重新跑一遍，把所有id都纠正过来
+        columns={"id": "silva_id"}, inplace=True
+    )  # 把所有id都纠正过来使用silva_id而不是wrong的id
     # merge dfs
     SILVA_set_pred_16sDeepSeg = pd.merge(
-        id_seqs_df, pred_16sDeepSeg_df, on="silva_id_wrong", how="inner"
+        id_seqs_df, pred_16sDeepSeg_df, on="silva_id", how="inner"
     )
     print(f"Total set has {SILVA_set_pred_16sDeepSeg.shape[0]} seqs.")
 
