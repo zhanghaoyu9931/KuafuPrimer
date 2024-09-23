@@ -1,6 +1,6 @@
  ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-V0.0.1-brightgreen) ![license](https://img.shields.io/badge/license-GPL--v3-blue)
 
-## KuafuPrimer: [**Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities**]()
+## KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
 
 ![0](./pic/logo.png)
 
@@ -184,7 +184,7 @@ There will be two files in the output directory: `DeepAnno16_running_time.txt` r
 
 ## Citation
 
-TODO: ######
+KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
 
 ## Contact
 
