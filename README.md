@@ -38,11 +38,9 @@ File tree:
 └── Screen_best_PP.py
 ```
 
-We provide two ways to use the KuafuPrimer tool: use repository from GitHub or use the GUI.
+###### How to install KuafuPrimer from GitHub
 
-###### How to use KuafuPrimer from GitHub
-
-1. Download the program:
+1. Clone the repository:
 
    ```powershell
    git clone https://github.com/zhanghaoyu9931/KuafuPrimer.git
@@ -57,14 +55,7 @@ We provide two ways to use the KuafuPrimer tool: use repository from GitHub or u
 
    Notably, you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
 
-###### How to use GUI version of KuafuPrimer
-
-TODO YXW: ######
-
-## Quickstart:
-
-###### Design ecosystem-specific primer pair.
-
+###### Dependencies
 User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_reference_files/) dataset for taxonomic classification using mothur tool. These files should be saved as:
 
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
@@ -80,6 +71,10 @@ There are some tool requirements before running the program：
 4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
 5. [MFEprimer](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 3.2.6)
 
+
+## Quickstart:
+
+###### Design ecosystem-specific primer pair.
 To design the ecosystem specific primer pairs from the relevant genera profiling of the studied environment, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
 
 ```
