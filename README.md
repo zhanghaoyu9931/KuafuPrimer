@@ -62,7 +62,7 @@ User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_refer
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
 2. `Model_data/Silva_ref_data/silva.nr_v138_1.tax`
 
-Other dataset files the KuafuPrimer requires are provided in Zenodo website, and user needs to download and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
+Other dataset files the KuafuPrimer requires are provided in the Zenodo (10.5281/zenodo.13829178), and user needs to download and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
 
 There are some tool requirements before running the KuafuPrimer：
 
