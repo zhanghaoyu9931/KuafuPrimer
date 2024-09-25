@@ -210,7 +210,7 @@ This pipeline will output the processed files of the metagenomic data in `./inpu
 ###### Use DeepAnno16 to demarcate 16S rRNA gene sequences.
 
 ```powershell
-# 1. Download the trained DeepAnno16 modol from [http:***].
+# 1. Download the trained DeepAnno16 modol from Zenodo (10.5281/zenodo.13829178).
 # 2. Put the model.pth file in "Model_data/DeepAnno16_publicated_model/model.pth".
 # 3. Run DeepAnno16 to demarcate the example file:
 python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/DeepAnno16_publicated_model/model.pth --input input/demo_input_DeepAnno16.csv --output output/demo_output_DeepAnno16.csv
@@ -219,7 +219,7 @@ python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/
 
 There will be two files in the output directory: `DeepAnno16_running_time.txt` records the running time of this procedure, `demo_output.csv` is the DeepAnno16 output file.
 
-> If you want to design ecosystem specific primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the DeepAnno16 module to demarcate your sequences and afterwards run the design and in-silico PCR procedures
+> If you want to design primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the DeepAnno16 module to demarcate your sequences and afterwards run the design and in-silico PCR procedures **(TODO)**
 
 ## Citation
 

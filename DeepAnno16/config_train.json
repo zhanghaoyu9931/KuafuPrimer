@@ -1,0 +1,37 @@
+{
+    "name": "16sRNA_seg_Unet",
+    "n_gpu": 1,
+    "arch": {
+        "type": "UNET_1D",
+        "args": {"input_dim": 5, "layer_n": 128, "kernel_size": 7, "depth": 3, "output_class": 10}
+    },
+    "data_loader": {
+        "type": "RnaSegDataLoader",
+        "args": {
+            "data_dir": "/data1/hyzhang/Projects/16sDeepSeg_summary/Data/train_test_split/training_set.csv",
+            "batch_size": 512,
+            "shuffle": true,
+            "validation_split": 0.1111,
+            "num_workers": 16,
+            "seq_lens": 1600,
+            "data_type": "ATGC_10"
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args": {"lr": 0.001, "weight_decay": 0, "amsgrad": true}
+    },
+    "loss": "cross_entropy",
+    "metrics": ["unet_acc_v2"],
+    "lr_scheduler": {"type": "StepLR", "args": {"step_size": 50, "gamma": 0.1}},
+    "trainer": {
+        "epochs": 100,
+        "save_dir": "/data1/hyzhang/Projects/16sDeepSeg_summary/Results/16sDeepSeg",
+        "save_period": 5,
+        "verbosity": 2,
+        "monitor": "min val_loss",
+        "early_stop": 30,
+        "tensorboard": false
+    },
+    "log_config": "logger/logger_config.json"
+}

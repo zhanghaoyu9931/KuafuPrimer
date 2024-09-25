@@ -1,0 +1,32 @@
+{
+    "name": "RedSeg",
+    "n_gpu": 1,
+
+    "arch": {
+        "type": "UNET_1D",
+        "args": {
+            "input_dim": 5,
+            "layer_n": 128,
+            "kernel_size": 7,
+            "depth": 3,
+            "output_class": 10
+        }
+    },
+    "data_loader": {
+        "type": "RnaSegDataLoader",
+        "args":{
+            "data_dir": "/data3/hyzhang/ont/16s_RNA_seg/parsed_data/HVRs_info_merged_incomplete.csv",
+            "seq_lens": 1600,
+            "data_type": "ATGC_10"
+        }
+    },
+    "trainer": {
+        "epochs": 2,
+        "save_dir": "output/outlog",
+        "save_period": 1,
+        "verbosity": 2,
+        "monitor": "min val_loss",
+        "early_stop": 20,
+        "tensorboard": false
+    }
+}
