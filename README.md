@@ -205,7 +205,7 @@ python process_after_pipeline.py \
   --id_list ../input/metagenomic_id_list.txt \ # id list
 ```
 
-This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance matrix of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps. There will be two types of abundance matrixes named as `merged_abun_table_ncbi.tsv` (classified by kraken with ncbi database) and `merged_abun_table.tsv` (classified by kraken with silva database), and we recommend to use the `merged_abun_table_ncbi.tsv`.
+This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance matrix of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps. There will be two types of abundance matrixes named as `merged_abun_table_ncbi.tsv` (classified by kraken with ncbi database) and `merged_abun_table.tsv` (classified by kraken with silva database), **and we recommend to use the `merged_abun_table_ncbi.tsv`.**
 
 ###### Use DeepAnno16 to demarcate 16S rRNA gene sequences.
 
