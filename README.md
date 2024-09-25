@@ -23,7 +23,7 @@ File tree:
 
 ```
 .
-├── 16sDeepSeg/
+├── DeepAnno16/
 ├── input/
 ├── Metagenomic_process/
 ├── Model_data/
