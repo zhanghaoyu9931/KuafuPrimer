@@ -94,7 +94,7 @@ python KuafuPrimer.py \
     --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
 ```
 
-Notably, the input relevant genera profiling file could be generated through the [pipeline](#Optional-function) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
+Notably, the input relevant genera profiling file could be generated through the [pipeline](#Optional-functions) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
 
 ###### In-silico PCR of the designed primer pairs and screen for the primer with minimal bias for the studied communities.
 
@@ -133,38 +133,81 @@ The detailed in-silico PCR performance and meta-information of every condidate p
 Here we provide the scripts for reproducing the results of our paper:
 
 ```
-16sDeepSeg_train_test.ipynb # code for training and evaluation of 16sDeepSeg module
+DeepAnno16_train_test.ipynb # code for training and evaluation of DeepAnno16 module
 DataProcess_and_InsilicoEvaluation.ipynb # code for preprocessing SILVA dataset and in-silico evaluation
  
 ```
 
-## Optional function
+## Optional functions
 
 ###### A pipeline for preprocessing the metagenomic data of the studied environment.
 
 Here we privide a pipeline to process metagenomic raw data, please feel free to use your own familiar metagenomic processing workflow instead. This pipeline requires some tools to be installed before:
 
-1. [prinseq-lite](https://github.com/uwb-linux/prinseq) (version == 0.20.4)
-2. [KneadData](https://github.com/biobakery/kneaddata#kneaddata-user-manual) (version == 0.12.0)
-3. [Usearch](http://www.drive5.com/usearch/) (version == 11.0)
-4. [SortMeRNA](https://bioinfo.univ-lille.fr/sortmerna/sortmerna.php) (version == 4.3.6)
+1. [sra-tools](https://github.com/ncbi/sra-tools) (version == 3.0.2)
+2. [fastp](https://github.com/OpenGene/fastp) (version == 0.23.4)
+3. [bowtie2](https://github.com/BenLangmead/bowtie2) (version == 2.3.4.1)
+4. [Kraken2](https://github.com/DerrickWood/kraken2) (version == 2.1.3)
+5. [Bracken](https://github.com/jenniferlu717/Bracken) (version == 2.9)
+
+And some external databases need to be downloaded:
+
+1. Kraken databases
+   ```powershell
+   cd ./Metagenomic_preprocessing/
+
+   ## build standard kraken2 database
+   DBNAME=./database/ncbi_db_kraken2
+   kraken2-build --standard --db $DBNAME --threads 32
+   kraken2-build --download-taxonomy --db $DBNAME --threads 32
+   kraken2-build --download-library bacteria --db $DBNAME --threads 32
+   kraken2-build --build --db $DBNAME --threads 32
+
+   # bracken
+   KRAKEN_DB=$DBNAME
+   READ_LEN=150
+   bracken-build -d ${KRAKEN_DB} -t 32 -l ${READ_LEN}
+
+   ## build silva kraken2 database
+   DBNAME=./database/silva_db_kraken2
+   kraken2-build --special silva --db $DBNAME --threads 32
+   kraken2-build --download-taxonomy --db $DBNAME --threads 32
+   kraken2-build --download-library bacteria --db $DBNAME --threads 32
+   kraken2-build --build --db $DBNAME --threads 32
+
+   # bracken
+   KRAKEN_DB=$DBNAME
+   READ_LEN=150
+   bracken-build -d ${KRAKEN_DB} -t 32 -l ${READ_LEN}
+
+   ```
+2. Human reference database for bowtie2
+   ```powershell
+   cd ./Metagenomic_preprocessing/
+
+   wget https://genome-idx.s3.amazonaws.com/bt/GRCh38_noalt_as.zip # download the zip file
+   unzip GRCh38_noalt_as.zip -d ./database/GRCh38/ # unzip the file
+   ## users may need to rename the decompressed files corresponding to the names used in the 'pipeline_metagenomic.sh'.
+   ```
 
 `./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
 
 ```powershell
-bash Metagenomic_preprocessing/pipeline_metagenomic.sh \
-  ./input \ # directory of metagenomic files
+cd ./Metagenomic_preprocessing/
+
+bash pipeline_metagenomic.sh \
+  ../input \ # directory of metagenomic files
   .R1.raw.fastq.gz .R2.raw.fastq.gz \ # suffix of paired-end data
-  ./input/metagenomic_id_list.txt \ # id list
+  ../input/metagenomic_id_list.txt \ # id list
 
 python process_after_pipeline.py \
-  --metagenomic_dir ./input \ # directory of metagenomic files
-  --id_list ./input/metagenomic_id_list.txt \ # id list
+  --metagenomic_dir ../input \ # directory of metagenomic files
+  --id_list ../input/metagenomic_id_list.txt \ # id list
 ```
 
-This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance table of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps.
+This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance matrix of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps. There will be two types of abundance matrixes named as `merged_abun_table_ncbi.tsv` (classified by kraken with ncbi database) and `merged_abun_table.tsv` (classified by kraken with silva database), and we recommend to use the `merged_abun_table_ncbi.tsv`.
 
-###### Use DeepAnno16 to demarcate 16s rRNA gene sequences.
+###### Use DeepAnno16 to demarcate 16S rRNA gene sequences.
 
 ```powershell
 # 1. Download the trained DeepAnno16 modol from [http:***].
@@ -185,7 +228,3 @@ KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers wi
 ## Contact
 
 If you have any questions, please don't hesitate to ask me: zhanghaoyu9931@pku.edu.cn or hqzhu@pku.edu.cn
-
-## License
-
-The source code of IPEV is distributed as open source under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html) , the KuafuPrimer program and all datasets  also can be freely available at  [zhulab homepage](https://cqb.pku.edu.cn/zhulab/info/1006/1156.htm)

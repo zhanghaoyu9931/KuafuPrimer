@@ -1,8 +1,8 @@
 #### Pipeline for metagenomic data processing
-Human_DB=/data1/hyzhang/Projects/16sDeepSeg_summary/Evi_specific_primers_database/Primer_evaluation_fromMetagenomeData/data/GRCh38/G38
-silva_db_kraken2=/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/Model_data/Silva_ref_data/silva_db_kraken2
-ncbi_db_kraken2=/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/Model_data/ncbiStandard_db_kraken2
-repair_sh=/data1/hyzhang/Projects/EcoPrimer_git/DeepEcoPrimer_v2/Metagenomic_process/other_tools/bbmap/repair.sh
+Human_DB=./database/GRCh38/G38 # human reference database
+silva_db_kraken2=./database/silva_db_kraken2
+ncbi_db_kraken2=./database/ncbi_db_kraken2
+repair_sh=./tools/repair.sh
 
 ## interface
 ori_data_dir=$1
@@ -145,14 +145,6 @@ do
     bracken -d $ncbi_db_kraken2 -i $out_dir_this_srr/$demo_nm'_step3.5_ncbi_ExtraBac_rp.txt' \
         -o $out_dir_this_srr/$demo_nm'_step4_ncbi_abun.txt' -w $out_dir_this_srr/$demo_nm'_step4_ncbi_rp.txt' -r 150 \
         -l G -t $t_ge_num_ncbi # generate relative abun matrix to genus level
-
-    ## 4. Get the relative abun matrix -- family
-    bracken -d $silva_db_kraken2 -i $out_dir_this_srr/$demo_nm'_step3.5_ExtraBac_rp.txt' \
-        -o $out_dir_this_srr/$demo_nm'_step4_abun_S.txt' -w $out_dir_this_srr/$demo_nm'_step4_rp_S.txt' -r 150 \
-        -l S -t $t_ge_num_silva # generate relative abun matrix to genus level
-    bracken -d $ncbi_db_kraken2 -i $out_dir_this_srr/$demo_nm'_step3.5_ncbi_ExtraBac_rp.txt' \
-        -o $out_dir_this_srr/$demo_nm'_step4_ncbi_abun_S.txt' -w $out_dir_this_srr/$demo_nm'_step4_ncbi_rp_S.txt' -r 150 \
-        -l S -t $t_ge_num_ncbi # generate relative abun matrix to genus level
 
     ## rm tmp files
     rm $tmp_out/$demo_nm'_step2_ot.txt' $tmp_out/$demo_nm'_step1'*'.fastq' # $tmp_out/$demo_nm*'.fastq'
