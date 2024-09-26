@@ -161,9 +161,6 @@ threadpoolctl==3.2.0
 tinycss2==1.2.1
 tokenize-rt==5.2.0
 tomli==2.0.1
-torch==1.12.0+cu113
-torchaudio==0.12.0+cu113
-torchvision==0.13.0+cu113
 tornado==6.3.3
 tqdm==4.66.1
 traitlets==5.10.1

@@ -1,4 +1,4 @@
- ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-V0.0.1-brightgreen) ![license](https://img.shields.io/badge/license-GPL--v3-blue)
+ ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-v1.12.0-green) ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
 
@@ -9,9 +9,9 @@
 - [Introduction](#Introduction)
 - [Installation](#Installation)
 - [Quickstart](#Quickstart)
+- [Optional functions](#Optional functions)
 - [Citation](#Citation)
 - [Contact](#Contact)
-- [License](#License)
 
 ## Introduction
 
@@ -49,15 +49,17 @@ File tree:
 
    ```powershell
    1. conda create -n my_env_name python=3.9
-   2. source activate my_env_name
-   3. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
+   2. conda activate my_env_name
+   3. pip install torch==1.12.0+cu11 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113 # CUDA 11.3
+   4. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
    ```
 
-   Notably, you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
+   Notably, we have used torch==1.12.0+cu113 for testing. 
+3. you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
 
 ###### Dependencies
 
-User needs to download the [silva.nr_v138_1](https://mothur.org/wiki/silva_reference_files/) dataset for taxonomic classification using mothur tool. These files should be saved as:
+User needs to download the [silva.nr_v138_1](https://mothur.s3.us-east-2.amazonaws.com/wiki/silva.nr_v138_1.tgz) dataset for taxonomic classification using mothur tool. These files should be saved as:
 
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
 2. `Model_data/Silva_ref_data/silva.nr_v138_1.tax`
