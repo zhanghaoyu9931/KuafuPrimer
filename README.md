@@ -9,7 +9,7 @@
 - [Introduction](#Introduction)
 - [Installation](#Installation)
 - [Quickstart](#Quickstart)
-- [Optional functions](#Optional functions)
+- [Optional functions](#Optional-functions)
 - [Citation](#Citation)
 - [Contact](#Contact)
 
@@ -54,8 +54,7 @@ File tree:
    4. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
    ```
 
-   Notably, we have used torch==1.12.0+cu113 for testing. 
-3. you may need to install [**torch==1.12.0+cu113**](https://pytorch.org/get-started/previous-versions/) manually.
+   Notably, we have used torch==1.12.0+cu113 for testing. Please refer to the [PyTorch oficial website](https://pytorch.org/get-started/previous-versions/) to choose the appropriate CUDA version or CPU version for installation.
 
 ###### Dependencies
 
@@ -64,7 +63,7 @@ User needs to download the [silva.nr_v138_1](https://mothur.s3.us-east-2.amazona
 1. `Model_data/Silva_ref_data/silva.nr_v138_1.align`
 2. `Model_data/Silva_ref_data/silva.nr_v138_1.tax`
 
-Other dataset files the KuafuPrimer requires are provided in the Zenodo (10.5281/zenodo.13829178), and user needs to download and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
+Other dataset files the KuafuPrimer requires are provided in the [Zenodo](https://zenodo.org/records/13829178/files/Silva_ref_data.zip?download=1) (10.5281/zenodo.13829178), and user needs to download and put them in the directory `Model_data/Silva_ref_data/`. The script to produce these files is in the `DataProcess_and_InsilicoEvaluation.ipynb`.
 
 There are some tool requirements before running the KuafuPrimer：
 
