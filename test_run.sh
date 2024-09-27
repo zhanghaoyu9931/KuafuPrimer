@@ -1,5 +1,5 @@
 # date: 20240831
-# 写一个脚本，用于运行EcoPrimer
+# 写一个脚本，用于运行KuafuPrimer
 demo_input=input/demo_input_KuafuPrimer_ge_profile.csv
 demo_design_output=output/demo_output_KuafuPrimer
 # target_vs='v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8'

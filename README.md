@@ -50,7 +50,7 @@ File tree:
    ```powershell
    1. conda create -n my_env_name python=3.9
    2. conda activate my_env_name
-   3. pip install torch==1.12.0+cu11 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113 # CUDA 11.3
+   3. pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113 # CUDA 11.3
    4. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
    ```
 
