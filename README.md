@@ -71,13 +71,13 @@ There are some tool requirements before running the KuafuPrimer：
 2. [muscle](https://drive5.com/muscle) (version == 5.1)
 3. [PrimerMatch](https://edwardslab.bmcb.georgetown.edu/software/PrimerMatch.html) (version == 1.0.0)
 4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
-5. [MFEprimer](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 3.2.6)
+5. [MFEprimer](https://github.com/quwubin/MFEprimer-3.0/releases) (version == 3.2.6)
 
 ## Quickstart:
 
-###### Design ecosystem-specific primer pair.
+###### Design community-specific primer pairs.
 
-To design the ecosystem specific primer pairs from the relevant genera profiling of the studied environment, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
+To design the ecosystem specific primer pairs from the relevant genera profiling of the studied microbial communities, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
 
 ```
 # set the input and output path
