@@ -1,5 +1,5 @@
 {
-    "name": "RedSeg",
+    "name": "DeepAnno16",
     "n_gpu": 1,
 
     "arch": {
@@ -15,7 +15,7 @@
     "data_loader": {
         "type": "RnaSegDataLoader",
         "args":{
-            "data_dir": "/data3/hyzhang/ont/16s_RNA_seg/parsed_data/HVRs_info_merged_incomplete.csv",
+            "data_dir": "input/demo_input_DeepAnno16.csv",
             "seq_lens": 1600,
             "data_type": "ATGC_10"
         }
@@ -28,5 +28,6 @@
         "monitor": "min val_loss",
         "early_stop": 20,
         "tensorboard": false
-    }
+    },
+    "log_config": "DeepAnno16/logger/logger_config.json"
 }

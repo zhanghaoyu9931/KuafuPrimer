@@ -1,4 +1,4 @@
- ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-v1.12.0-green) ![License](https://img.shields.io/badge/License-MIT-blue)
+ ![Build](https://img.shields.io/badge/Build-passing-brightgreen) ![Pytorch](https://img.shields.io/badge/Pytorch-v1.12.0-green) ![License](https://img.shields.io/badge/License-MIT-blue) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13829178.svg)](https://doi.org/10.5281/zenodo.13829178)
 
 ## KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
 
@@ -210,12 +210,13 @@ This pipeline will output the processed files of the metagenomic data in `./inpu
 
 ###### Use DeepAnno16 to demarcate 16S rRNA gene sequences.
 
-```powershell
-# 1. Download the trained DeepAnno16 modol from Zenodo (10.5281/zenodo.13829178).
-# 2. Put the model.pth file in "Model_data/DeepAnno16_publicated_model/model.pth".
-# 3. Run DeepAnno16 to demarcate the example file:
-python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/DeepAnno16_publicated_model/model.pth --input input/demo_input_DeepAnno16.csv --output output/demo_output_DeepAnno16.csv
+1. Download the trained DeepAnno16 modol from [Zenodo](https://zenodo.org/records/13829178/files/DeepAnno16_publicated_model.zip).
+2. Put the downloaded `model.pth` and `config.json` files in the `Model_data/DeepAnno16_publicated_model/` directory.
+3. Run DeepAnno16 to demarcate the 16S rRNA gene, and the input file must contain two columns named `id` and `16s_rna` to provide a unique id and nucleotide sequence for each 16S rRNA gene respectively (please refer to the example input file):
 
+```powershell
+# Run DeepAnno16 to demarcate the example file.
+python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/DeepAnno16_publicated_model/model.pth --input input/demo_input_DeepAnno16.csv --output output/demo_output_DeepAnno16.csv
 ```
 
 There will be two files in the output directory: `DeepAnno16_running_time.txt` records the running time of this procedure, `demo_output.csv` is the DeepAnno16 output file.

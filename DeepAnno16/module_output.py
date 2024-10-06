@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 import argparse
@@ -41,7 +41,7 @@ def main(config, output_df_to="", input_csv="", plot_auc=""):
 
     # build model architecture
     model = config.init_obj("arch", module_arch)
-    logger.info(model)
+    # logger.info(model)
     
     # prepare model for testing
     device, device_ids = prepare_device(config["n_gpu"])
@@ -88,10 +88,10 @@ def main(config, output_df_to="", input_csv="", plot_auc=""):
 
     # record the running time
     end = time.time()
-    print(f'Running time of this procedure: {end - start}s')
+    print(f'Running time of this procedure: {end - start:.4f} s.')
     
-    with open(os.path.join(fold_dir, 'RedSeg_running_time.txt'), 'w') as f:
-        f.write(f'{end - start}')
+    with open(os.path.join(fold_dir, 'DeepAnno16_running_time.txt'), 'w') as f:
+        f.write(f'Running time of this procedure: {end - start:.4f} s.')
         
     # save the segmentation results
     input_df = pd.read_csv(input_csv)
