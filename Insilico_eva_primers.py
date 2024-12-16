@@ -15,7 +15,7 @@ import time
 import datetime
 from common_utils import *
 
-## 一些全局参数
+## global vars
 flip_bp_add = 20  # amplicon两端20bp的序列被加入进去
 NGS_platform_error = (
     {  # from: "Sequencing error profiles of Illumina sequencing instruments"
@@ -38,8 +38,8 @@ def parse_blastTxt_getAmplicon(
     fr_pri_atgc={},
     silva_ref_atgc=None,
 ):
-    # 读取blast结果，同时确认是否能够amplicon
-    # K: 允许的错配数量，但是不能简单用blastn结果，因为有兼并碱基
+    # Read blast res file and get the in-silico PCR amplicons #
+    # K: the permitted mismatch number, however need to consider the degenerate base detaily
     with open(blast_txt, "r") as f:
         lines = f.readlines()
     index_line = lines[3]
@@ -98,7 +98,7 @@ def parse_blastTxt_getAmplicon(
     # 4.计算amplicon成功的概率
     blast_df = blast_df.loc[
         blast_df.groupby(["query_acc.ver", "subject_acc.ver"])["evalue"].idxmin(),
-    ]  # 去除重复
+    ]  # de-replicated
 
     def get_amplicon_info(x):
         x = x.reset_index(drop=True)
@@ -115,7 +115,7 @@ def parse_blastTxt_getAmplicon(
         if ("forward_pri" not in list(x["query_acc.ver"])) or (
             "reverse_pri" not in list(x["query_acc.ver"])
         ):
-            # amplicon需要两个引物都匹配上
+            # successful amplification needs both forward and reverse primers matched
             # print(x)
             return pd.DataFrame([amplicon_info])
         x.index = x["query_acc.ver"]
@@ -149,7 +149,6 @@ def parse_blastTxt_getAmplicon(
     )
     # For debug
     # print('AAAAAAAAAAAAAA: ', blast_df.head())
-    # print(blast_df[blast_df['amplicon_size'] > 10].shape, blast_df.shape)
     return blast_df
 
 
@@ -186,11 +185,11 @@ def parse_pcr_ali_res(fna_aligned):
 
 
 def simulate_sequencing_errors(sequence, NGS_platform="", PE_lens=300):
-    # 1226: 加入测序错误的模拟
+    # 1226: simulate the sequencing errors
     error_mean, error_std = NGS_platform_error[NGS_platform]
     error_rate = (
         np.random.normal(error_mean, error_std) / 100
-    )  # 错误率服从均值0.473，标准差0.938的正态分布
+    )
     error_sequence = list(sequence)
     overlap = [len(sequence) - PE_lens, PE_lens]
 
@@ -200,14 +199,14 @@ def simulate_sequencing_errors(sequence, NGS_platform="", PE_lens=300):
         current_base = sequence[i]
         current_base = degenerate_base_table[current_base][0]
         if (i > overlap[0]) and (i < overlap[1]):
-            # overlap区域错误率平方
+            # error rate in overlap region is squared
             error_rate_pos = error_rate**2
         else:
             error_rate_pos = error_rate
         if random.random() < error_rate_pos:
             possible_bases = ["A", "T", "G", "C"]
             possible_bases.remove(current_base)
-            error_sequence[i] = random.choice(possible_bases)  # 随机替换为其他类型的碱基
+            error_sequence[i] = random.choice(possible_bases) # randomly choose a base
         else:
             error_sequence[i] = current_base
 
