@@ -5,7 +5,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-## 全局变量
+## global vars
 taxa_level = ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"]
 atgc_to_complement = {"A": "T", "T": "A", "G": "C", "C": "G", "-": "-"}
 degenerate_base_table = {
@@ -26,11 +26,11 @@ degenerate_base_table = {
     "D": ["A", "G", "T"],
 }
 blast_db_temp_dir = (
-    "output/temp" # 生成的一些中间文件放哪里
+    "output/temp" # temperate dir for blast db
 )
 
 
-## 有用的funcs
+## Useful functions
 def blast_cmd(query_seq, db="", out_path=""):
     cmd = f"blastn -db {db} -query "
     cmd += query_seq
@@ -42,6 +42,7 @@ def blast_cmd(query_seq, db="", out_path=""):
 
 
 def Tm_GCcal(primer_atgc="AY", sup_seq="AA"):
+    # Calculate Tm of primer
     if len(primer_atgc) != len(sup_seq):
         # print('Primer and template seq have different length!')
         return 0
@@ -53,7 +54,7 @@ def Tm_GCcal(primer_atgc="AY", sup_seq="AA"):
         p_atgc_list = degenerate_base_table[p_atgc]
         if s_atgc not in p_atgc_list:
             continue
-        Tm += Tm_C[s_atgc] / len(p_atgc_list)  # degenerate base的结合能力要打个折扣
+        Tm += Tm_C[s_atgc] / len(p_atgc_list)  # Weighted degenerate base Tm
     return Tm
 
 

@@ -11,3 +11,7 @@ Model_data/Silva_ref_data/*
 ## 3. Ignore all large size database ##
 Metagenomic_preprocessing/GRCh38_noalt_as.zip
 Model_data/DeepAnno16_publicated_model
+
+## 4. Ignore script for submission ##
+submission.ipynb
+Table_S5.xlsx
