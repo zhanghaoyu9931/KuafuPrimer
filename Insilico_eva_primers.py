@@ -950,6 +950,6 @@ if __name__ == "__main__":
 
     with open(f"{root_dir}/log_file.txt", "w") as log_file:
         print(
-            f"DEcoPrimer In-silico PCR procedure running time: {end_time - start_time}",
+            f"KuafuPrimer In-silico PCR procedure running time: {end_time - start_time}",
             file=log_file,
         )

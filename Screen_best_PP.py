@@ -51,7 +51,15 @@ def check_dimer_hairpin(
 
 
 ## 主要函数
-def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, ids_select_list=None, ids_neglect_list=None):
+def screen_PPs_main(
+    pcr_dir="",
+    rk_by="Genus_accuracy",
+    ge_seq_num_cutoff=10,
+    ids_select_list=None,
+    ids_neglect_list=None,
+    offTarget_fasta='Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta',
+    permitted_offTarget_mismatch=5,
+):
     # 先跑这部分为每个环境跑一个总体结果，以及跑一个大的结果出来
     bacdive_designed_res = []
     # for rk_by in ['Pri_amp_eff', 'Genus_accuracy']:
@@ -75,6 +83,7 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
                     "reverse_start": [],
                     "dimer_flag": [],
                     "hairpin_flag": [],
+                    "offTarget_amplification": [],
                 }
                 for pri_i in range(df_resInfo_vv.shape[0]):
                     f_atgc, r_atgc = eval(df_resInfo_vv.loc[pri_i, "pri_pair"])
@@ -88,10 +97,17 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
                     dimer_flag, hairpin_flag = check_dimer_hairpin(f_atgc, r_atgc)
                     pos_df["dimer_flag"].append(dimer_flag)
                     pos_df["hairpin_flag"].append(hairpin_flag)
+                    offTarget_res, offTarget_detail = offTarget_amplicon_check(
+                        f_atgc,
+                        r_atgc,
+                        permitted_mismatch=permitted_offTarget_mismatch,
+                        stringent_mode=True, # default to be stringent mode
+                        offTarget_fasta=offTarget_fasta,
+                    )
+                    pos_df["offTarget_amplification"].append(str(offTarget_res))
                 for k, v in pos_df.items():
                     df_resInfo_vv[k] = pos_df[k]
-                    # df_resInfo_vv['reverse_start'] = pos_df['reverse_start']
-
+                    
                 df_this_evi_pri_info.append(df_resInfo_vv)
                 continue
             try:
@@ -102,9 +118,11 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
 
             # 1123: 规范化Genus名称
             df_t["Genus"] = df_t["Genus"].apply(lambda x: ("_".join(x.split())).lower())
-            unGenus_nms = ['unknown', 'uncultured', 'uncultured_bacterium'] 
-            df_t['Genus'] = df_t["Genus"].apply(lambda x: 'unknown' if (x in unGenus_nms) else x) # 把未知物种的几个条目整合一下都叫unknown
-            
+            unGenus_nms = ["unknown", "uncultured", "uncultured_bacterium"]
+            df_t["Genus"] = df_t["Genus"].apply(
+                lambda x: "unknown" if (x in unGenus_nms) else x
+            )  # 把未知物种的几个条目整合一下都叫unknown
+
             df_t["Genus_pred"] = (
                 df_t["Genus_pred"]
                 .fillna("-")
@@ -117,10 +135,14 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
                 df_this_tax = df_t[df_t["Genus"] == tax]
                 # 20240103: 加入筛选，在或者不在某个list中的ids
                 if ids_select_list is not None:
-                    df_this_tax = df_this_tax[df_this_tax['silva_id'].isin(ids_select_list)]
-                if ids_neglect_list is not None:                  
-                    df_this_tax = df_this_tax[~ df_this_tax['silva_id'].isin(ids_neglect_list)]
-                    
+                    df_this_tax = df_this_tax[
+                        df_this_tax["silva_id"].isin(ids_select_list)
+                    ]
+                if ids_neglect_list is not None:
+                    df_this_tax = df_this_tax[
+                        ~df_this_tax["silva_id"].isin(ids_neglect_list)
+                    ]
+
                 df_this_tax.reset_index(inplace=True, drop=True)
                 reads_all_n = df_this_tax.shape[0]
                 tax_num[ge_i] = reads_all_n
@@ -151,7 +173,10 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     df_this_evi["tax_name"] = taxa_all
     df_this_evi = pd.DataFrame(df_this_evi)
     if ge_seq_num_cutoff != 10:
-        df_this_evi.to_csv(os.path.join(pcr_dir, f"detail_{rk_by}_taxnumCut{ge_seq_num_cutoff}.csv"), index=False)
+        df_this_evi.to_csv(
+            os.path.join(pcr_dir, f"detail_{rk_by}_taxnumCut{ge_seq_num_cutoff}.csv"),
+            index=False,
+        )
     else:
         df_this_evi.to_csv(os.path.join(pcr_dir, f"detail_{rk_by}.csv"), index=False)
 
@@ -159,11 +184,11 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     # 输出最优的引物组合
     df_this_evi = df_this_evi[df_this_evi["tax_num"] > ge_seq_num_cutoff].reset_index(
         drop=True
-    )  # 20240103: 筛去那些非常少genus seqs的，改为使用超参数
+    )  # remove genus with too few seqs
     df_this_evi_pri_means = df_this_evi.iloc[:, :-2].mean(
         axis=0
-    )  # 最后两列是genus和genus number
-    # print('AAAA', df_this_evi)
+    )  # genus and genus number columns
+    # print('AAAA', df_this_evi) # used for debug
     best_pri_index = df_this_evi_pri_means.argmax()
     best_pri_nm, best_pri_pcr_res = (
         df_this_evi_pri_means.index[best_pri_index],
@@ -176,14 +201,15 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
         best_pri_ed,
         dimer_flag,
         hairpin_flag,
+        offTarget_amplification
     ) = df_this_evi_pri_info[df_this_evi_pri_info["pri_nm"] == best_pri_nm].values[
         0, 1:
     ]
     print(
-        f"Designed ecosystem specific primer pair for {pcr_dir[:-3]} is {best_pri_pair}, targeting {best_pri_vv} V-region, forward and reverse position in E.coli are ({best_pri_st},{ best_pri_ed}), with {best_pri_pcr_res * 100:.2f}% in-silico PCR amplicon accuracy. The dimer_flag and hairpin_flag are ({dimer_flag}, {hairpin_flag})"
+        f"Designed ecosystem specific primer pair for {pcr_dir[:-3]} is {best_pri_pair}, targeting {best_pri_vv} V-region, forward and reverse position in E.coli are ({best_pri_st},{ best_pri_ed}), with {best_pri_pcr_res * 100:.2f}% in-silico PCR amplicon accuracy.\nThe dimer_flag and hairpin_flag are ({dimer_flag}, {hairpin_flag}), and off-target amplification results are {offTarget_amplification}."
     )
 
-    # 计算一下每个环境的平均值,pri的std，用作评判扩增谱系是否均匀的标准
+    # calculation of std of taxonomic accuracy
     mean_ge_val = dict(df_this_evi.iloc[:, :-2].mean(axis=0))
     for pri_name, pri_val in mean_ge_val.items():
         pri_std = df_this_evi[pri_name].std()
@@ -204,7 +230,10 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     df_this_evi_pri_info.reset_index(inplace=True, drop=True)
     if ge_seq_num_cutoff != 10:
         df_this_evi_pri_info.to_csv(
-            os.path.join(pcr_dir, f"pri_metainfo_{rk_by}_taxnumCut{ge_seq_num_cutoff}.csv"), index=False
+            os.path.join(
+                pcr_dir, f"pri_metainfo_{rk_by}_taxnumCut{ge_seq_num_cutoff}.csv"
+            ),
+            index=False,
         )
     else:
         df_this_evi_pri_info.to_csv(
@@ -213,17 +242,16 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
 
     # concat topk designed primers with universal primers for comparison
     top_k = 5
-    uni_pris_compare = pd.read_excel(
-        "Model_data/Universal_primers/primers.xlsx"
-    )
+    uni_pris_compare = pd.read_excel("Model_data/Universal_primers/primers.xlsx")
     best_pri_pair_info = []
     df_this_evi_pri_info_designed = df_this_evi_pri_info[
-        df_this_evi_pri_info["pri_nm"].str.contains("design")
-    ].reset_index(drop=True)
+        df_this_evi_pri_info["pri_nm"].apply(lambda x: x.endswith("r"))
+    ].reset_index(
+        drop=True
+    )  # designed primers are ended with 'r'
     for top_i in range(top_k):
         if top_i >= df_this_evi_pri_info_designed.shape[0]:
             break
-        
         (
             best_pri_pair,
             best_pri_vv,
@@ -231,11 +259,12 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
             best_pri_ed,
             dimer_flag,
             hairpin_flag,
+            offTarget_amplification
         ) = df_this_evi_pri_info_designed.values[top_i, 1:-2]
         best_pri_pair_info.append(
             {
-                "seq_type": f"DEcoPrimer_designed",
-                "pri_nm": f"DEcoPrimer_designed_rank{top_i+1}",
+                "seq_type": f"KuafuPrimer_designed",
+                "pri_nm": f"KuafuPrimer_designed_rank{top_i+1}",
                 "forward_seq": eval(best_pri_pair)[0],
                 "reverse_seq": eval(best_pri_pair)[1],
                 "lens": f"{int(best_pri_ed) - int(best_pri_st)}bp",
@@ -258,15 +287,21 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
 # parse the args
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Design best primers for specific environment."
+        description="Screen the optimal primer for specific environment."
     )
     parser.add_argument(
         "--pcr_dir", type=str, help="Directory to the in-silico PCR res."
     )
     parser.add_argument("--rk_by", type=str, help=".")
     parser.add_argument("--ge_seq_num_cutoff", type=int, default=10, help=".")
-    parser.add_argument("--ids_select_neglect", type=str, default="no;no", help=".") # 只包含或者不包含某些silva-ids
+    parser.add_argument(
+        "--ids_select_neglect", type=str, default="no;no", help="."
+    )  # select or neglect id list
     
+    # params for offTarget_amplicon_check
+    parser.add_argument("--offTarget_fasta", type=str, default="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta", help=".")
+    parser.add_argument("--permitted_offTarget_mismatch", type=int, default=3, help=".")
+
     return parser.parse_args()
 
 
@@ -277,15 +312,26 @@ if __name__ == "__main__":
     ge_seq_num_cutoff = args.ge_seq_num_cutoff
     ids_select_neglect = args.ids_select_neglect
     ids_select_neglect_list = []
-    for ids_s_n in ids_select_neglect.split(';'):
-        if ids_s_n.endswith('.txt'):
-            with open(ids_s_n, 'r') as f:
+    for ids_s_n in ids_select_neglect.split(";"):
+        if ids_s_n.endswith(".txt"):
+            with open(ids_s_n, "r") as f:
                 ids_s_n_list = list(f.readlines())
-                ids_s_n_list = [x.strip('\n') for x in ids_s_n_list]
+                ids_s_n_list = [x.strip("\n") for x in ids_s_n_list]
         else:
-            ids_s_n_list = None # default
+            ids_s_n_list = None  # default
         ids_select_neglect_list.append(ids_s_n_list)
     ids_select_list, ids_neglect_list = ids_select_neglect_list[:2]
     print(ids_select_list, ids_neglect_list)
+
+    offTarget_fasta = args.offTarget_fasta
+    permitted_offTarget_mismatch = args.permitted_offTarget_mismatch
     
-    screen_PPs_main(pcr_dir=pcr_dir, rk_by=rk_by, ge_seq_num_cutoff=ge_seq_num_cutoff, ids_select_list=ids_select_list, ids_neglect_list=ids_neglect_list)
+    screen_PPs_main(
+        pcr_dir=pcr_dir,
+        rk_by=rk_by,
+        ge_seq_num_cutoff=ge_seq_num_cutoff,
+        ids_select_list=ids_select_list,
+        ids_neglect_list=ids_neglect_list,
+        offTarget_fasta=offTarget_fasta,
+        permitted_offTarget_mismatch=permitted_offTarget_mismatch,
+    )

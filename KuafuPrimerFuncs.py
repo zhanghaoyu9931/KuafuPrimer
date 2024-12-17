@@ -1,5 +1,3 @@
-## 0409: 全部使用自己的方法来做，不使用Decipher; 针对多序列比对结果，设计forward、backward的引物
-
 import random
 import os
 

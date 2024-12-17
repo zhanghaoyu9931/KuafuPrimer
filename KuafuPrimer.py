@@ -208,7 +208,7 @@ def parse_args():
         "--input_type",
         type=str,
         default="metagenomic",
-        help="Input data type of DEcoPrimer (metagenomic data or relevant genera profiling).",
+        help="Input data type of KuafuPrimer (metagenomic data or relevant genera profiling).",
     )
 
     # parameters for trim corresponding variable regions using 16sDeepSeg.
