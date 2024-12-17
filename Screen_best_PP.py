@@ -81,7 +81,7 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
                     f_atgc, r_atgc = (
                         f_atgc.replace("5'-", "").replace("-3'", "").strip(),
                         r_atgc.replace("5'-", "").replace("-3'", "").strip(),
-                    )  # 去除通用引物两侧的5，3标记
+                    )  # remove the 5'- and -3' in the primer (if exists)
                     pos_info = get_PP_position_Ecoli_K12(f_atgc, r_atgc)
                     pos_df["forward_start"].append(pos_info["forward_start"])
                     pos_df["reverse_start"].append(pos_info["reverse_start"])
@@ -163,7 +163,7 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
     df_this_evi_pri_means = df_this_evi.iloc[:, :-2].mean(
         axis=0
     )  # 最后两列是genus和genus number
-    print('AAAA', df_this_evi)
+    # print('AAAA', df_this_evi)
     best_pri_index = df_this_evi_pri_means.argmax()
     best_pri_nm, best_pri_pcr_res = (
         df_this_evi_pri_means.index[best_pri_index],
@@ -211,10 +211,10 @@ def screen_PPs_main(pcr_dir="", rk_by="Genus_accuracy", ge_seq_num_cutoff = 10, 
             os.path.join(pcr_dir, f"pri_metainfo_{rk_by}.csv"), index=False
         )
 
-    # 1124：组合并生成一个和uni primer拼接在一起的列表，只是为了后面的比较方便
+    # concat topk designed primers with universal primers for comparison
     top_k = 5
     uni_pris_compare = pd.read_excel(
-        "Model_data/Universal_primers/primers_sequencing_bacdiveComp.xlsx"
+        "Model_data/Universal_primers/primers.xlsx"
     )
     best_pri_pair_info = []
     df_this_evi_pri_info_designed = df_this_evi_pri_info[
@@ -283,7 +283,7 @@ if __name__ == "__main__":
                 ids_s_n_list = list(f.readlines())
                 ids_s_n_list = [x.strip('\n') for x in ids_s_n_list]
         else:
-            ids_s_n_list = None # 默认情况不设定该参数
+            ids_s_n_list = None # default
         ids_select_neglect_list.append(ids_s_n_list)
     ids_select_list, ids_neglect_list = ids_select_neglect_list[:2]
     print(ids_select_list, ids_neglect_list)

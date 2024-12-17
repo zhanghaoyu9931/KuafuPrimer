@@ -26,7 +26,20 @@ degenerate_base_table = {
     "D": ["A", "G", "T"],
 }
 blast_db_temp_dir = "output/temp"  # temperate dir for blast db
-
+blastn_columns = [
+    "query_acc.ver",     
+    "subject_acc.ver",     
+    "pident",     
+    "alignment_length",     
+    "mismatch",   
+    "gapopen",    
+    "q._start",     
+    "q._end",       
+    "s._start",     
+    "s._end",       
+    "evalue",     
+    "bitscore"   
+]
 
 ## Useful functions
 def blast_cmd(query_seq, db="", out_path="", evalue=1000): # original evalue=1000
@@ -35,7 +48,7 @@ def blast_cmd(query_seq, db="", out_path="", evalue=1000): # original evalue=100
     cmd += " -outfmt 7 "
     cmd += "-out "
     cmd += out_path
-    cmd += f" -task blastn-short -word_size 4 -evalue {evalue} -max_target_seqs 1000000"
+    cmd += f" -task blastn-short -word_size 4 -evalue {evalue} -max_target_seqs 1000000 -num_threads 16"
     os.system(cmd)
 
 
@@ -107,9 +120,11 @@ def parse_blastTxt(blast_txt="/data3/hyzhang/ont/16s_RNA_seg/res/blast_res/query
     index_line = ["_".join(x.split()) for x in index_line]
 
     lines = [x.strip("\n").split("\t") for x in lines if not x.startswith("#")]
-
-    blast_df = pd.DataFrame(lines)
-    blast_df.columns = index_line
+    if len(lines) == 0:
+        blast_df = pd.DataFrame(columns=blastn_columns)
+    else:
+        blast_df = pd.DataFrame(lines)
+        blast_df.columns = index_line
 
     # os.remove(blast_txt)
     return blast_df
@@ -162,11 +177,17 @@ def get_PP_position_Ecoli_K12(
 def offTarget_amplicon_check(
     f_pri,
     r_pri,
-    offTarget_db="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs",
-    offTarget_df="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta",
+    offTarget_fasta="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta",
     permitted_mismatch=1, 
     stringent_mode=False # if True, the any one of the primer pair has off-target amplification, then remove this primer pair
     ):
+    # make blast db
+    offTarget_db=offTarget_fasta.replace('.fasta', '')
+    cmd = f"makeblastdb -in {offTarget_fasta} -dbtype nucl -out {offTarget_db}"
+    if not os.path.exists(offTarget_db + ".nin"):
+        os.system(cmd)
+    
+    # create a temp dir
     rand_int = random.randint(9931, 99419)
     temp_dir = f"temp_offTarget_{rand_int}"
     os.makedirs(temp_dir, exist_ok=True)
@@ -176,9 +197,10 @@ def offTarget_amplicon_check(
     ]
     with open(f"./{temp_dir}/temp_al.fna", "w") as f:
         SeqIO.write(records, f, "fasta")
-    offTarget_df = SeqIO.parse(offTarget_df, "fasta")
+    # get the off-target seqs and description
+    offTarget_df = SeqIO.parse(offTarget_fasta, "fasta")
     offTarget_df = pd.DataFrame(
-        [[x.id, str(x.seq)] for x in offTarget_df], columns=["seq_id", "ATGC"]
+        [[x.id, str(x.seq), x.description] for x in offTarget_df], columns=["seq_id", "ATGC", "description"]
     )
     offTarget_df.set_index("seq_id", inplace=True)
     
@@ -207,6 +229,7 @@ def offTarget_amplicon_check(
             )
             return ref_seq_
 
+    offTarget_info_t = {'forward': [], 'reverse': []}
     try:
         blast_cmd(
             f"./{temp_dir}/temp_al.fna", db=offTarget_db, out_path=f"./{temp_dir}/temp_blast.txt", evalue=100
@@ -220,15 +243,17 @@ def offTarget_amplicon_check(
         ].reset_index(drop=True)  # de-replicated
         blast_df["ref_seq"] = blast_df.apply(lambda x: get_ref_atgc(x), axis=1)
         
-        offTarget_info_t = {'forward': [], 'reverse': []}
         for pri_ty in ["forward", "reverse"]:
             df_ = blast_df[blast_df["query_acc.ver"] == pri_ty].reset_index(drop=True)
             df_['pri_seq'] = f_pri if pri_ty == "forward" else r_pri
+            if len(df_) == 0:
+                continue
             df_['bind_prob'] = df_.apply(lambda x: primer_binding_probability(x['pri_seq'], x['ref_seq'], K=permitted_mismatch), axis=1)
             df_binded = df_[df_['bind_prob'] > 0]
             offTarget_info_t[pri_ty] += df_binded['subject_acc.ver'].tolist()
     except:
-        offTarget_info_t = {'forward': [], 'reverse': []}
+        print('Warning in off-target amplification check!')
+        # offTarget_info_t = {'forward': [], 'reverse': []}
     
     print('off-target seqs of each primer: ', offTarget_info_t)
     if stringent_mode:
@@ -237,16 +262,27 @@ def offTarget_amplicon_check(
         offTarget_info_final = [x for x in offTarget_info_t['forward'] if x in offTarget_info_t['reverse']]
     
     os.system(f"rm -r ./{temp_dir}")
-    return offTarget_info_final
+    return offTarget_info_final, offTarget_info_t
     
     
 if __name__ == '__main__':
-    pri_pair = ['GTGCCAGCMGCCGCGG', 'CCGTCAATTCMTTTRAGTTT']
-    # offTarget_amplicon_check(pri_pair[0], pri_pair[1])
-    
+    # test of off-target amplification check function 
+    off_target_test_df = []
+    offTarget_fasta="Model_data/OffTarget_amplicon_check/MITOBANK_6w.fasta"
     uni_pris = pd.read_excel('Model_data/OffTarget_amplicon_check/primers_offTarget_test.xlsx')
-    for pri_i in range(uni_pris.shape[0]):
+    for pri_i in range(0, uni_pris.shape[0]):
         pri_f, pri_r = uni_pris.loc[pri_i, ['forward_seq', 'reverse_seq']]
         print("Checking off-target amplification of primer pair: ", uni_pris.loc[pri_i, 'pri_nm'])
-        offTarget_res = offTarget_amplicon_check(pri_f, pri_r, permitted_mismatch=5)
+        offTarget_res, offTarget_detail = offTarget_amplicon_check(pri_f, pri_r, permitted_mismatch=5, stringent_mode=True, offTarget_fasta=offTarget_fasta)    
         print("off-target seqs: ", offTarget_res)
+        off_target_test_df.append(
+            {
+                'pri_nm': uni_pris.loc[pri_i, 'pri_nm'], 
+                'off_target_seqs': offTarget_res,
+                'off_target_seqs_forward': offTarget_detail['forward'],
+                'off_target_seqs_reverse': offTarget_detail['reverse']
+            }
+        )
+    off_target_test_df = pd.DataFrame(off_target_test_df)
+    off_target_test_df.to_csv('Model_data/OffTarget_amplicon_check/off_target_test_res.csv', index=False)
+        

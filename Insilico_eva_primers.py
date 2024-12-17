@@ -635,7 +635,7 @@ def get_designed_primer(
 
 
 def get_additional_primers(
-    pris_xlsx="data/primers_sequencing_bacdiveComp.xlsx", targetVregion=""
+    pris_xlsx="data/primers.xlsx", targetVregion=""
 ):
     # 原本的获取uni pri: get_universal_1000primers
     if pris_xlsx.endswith(".csv"):
@@ -646,7 +646,7 @@ def get_additional_primers(
     primer_pairs = []
     primer_pairs_nm = []
 
-    # 选择相应的V区域
+    # get primers of the target V-region
     pris_df = pris_df[(pris_df["v_region"] == targetVregion)]
     pris_df.reset_index(inplace=True, drop=True)
     for pp_i in range(pris_df.shape[0]):
@@ -704,7 +704,7 @@ def parse_args():
     parser.add_argument(
         "--additional_primers",
         type=str,
-        default="Model_data/Universal_primers/primers_sequencing_bacdiveComp.xlsx",
+        default="Model_data/Universal_primers/primers.xlsx",
         help="User can add their own primers for the comparison.",
     )
     parser.add_argument(

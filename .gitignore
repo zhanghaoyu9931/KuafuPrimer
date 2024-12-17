@@ -15,3 +15,4 @@ Model_data/DeepAnno16_publicated_model
 ## 4. Ignore script for submission ##
 submission.ipynb
 Table_S5.xlsx
+Model_data/OffTarget_amplicon_check/MITOBANK_6w*
