@@ -245,7 +245,7 @@ def screen_PPs_main(
     uni_pris_compare = pd.read_excel("Model_data/Universal_primers/primers.xlsx")
     best_pri_pair_info = []
     df_this_evi_pri_info_designed = df_this_evi_pri_info[
-        df_this_evi_pri_info["pri_nm"].apply(lambda x: x.endswith("r"))
+        df_this_evi_pri_info["pri_nm"].apply(lambda x: x.endswith("r") or "designed" in x)
     ].reset_index(
         drop=True
     )  # designed primers are ended with 'r'
