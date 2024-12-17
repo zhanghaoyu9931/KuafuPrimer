@@ -25,19 +25,17 @@ degenerate_base_table = {
     "B": ["C", "G", "T"],
     "D": ["A", "G", "T"],
 }
-blast_db_temp_dir = (
-    "output/temp" # temperate dir for blast db
-)
+blast_db_temp_dir = "output/temp"  # temperate dir for blast db
 
 
 ## Useful functions
-def blast_cmd(query_seq, db="", out_path=""):
+def blast_cmd(query_seq, db="", out_path="", evalue=1000): # original evalue=1000
     cmd = f"blastn -db {db} -query "
     cmd += query_seq
     cmd += " -outfmt 7 "
     cmd += "-out "
     cmd += out_path
-    cmd += " -task blastn-short -word_size 4 -evalue 1000 -max_target_seqs 1000000"
+    cmd += f" -task blastn-short -word_size 4 -evalue {evalue} -max_target_seqs 1000000"
     os.system(cmd)
 
 
@@ -66,7 +64,7 @@ def primer_binding_probability(primer_sequence, template_sequence, K=3):
     length = len(primer_sequence)
     match_list = []
 
-    ## 获取match信息
+    ## get the match types in each base
     for i in range(length):
         primer_base = primer_sequence[i]
         template_base = template_sequence[i]
@@ -82,8 +80,8 @@ def primer_binding_probability(primer_sequence, template_sequence, K=3):
             mismatch = primer_base + "->" + template_base + " mismatch"
             match_list.append(mismatch)
 
-    ## 计算bind概率
-    # 1.最后3个位点不能mismatch & 最后三个位点不能degenerate
+    ## calculate the sucessful amplification probability
+    # 1. there is no mismatch or degenerate match in the last 3 bases
     match_list_3end = [x for x in match_list[-3:]]
     if len([x for x in match_list_3end if "mismatch" in x]) > 0:
         return 0
@@ -91,12 +89,11 @@ def primer_binding_probability(primer_sequence, template_sequence, K=3):
         len([x for x in match_list_3end if "Degenerate match" in x]) > 1
     ):  # 0104: 不允许3‘端存在多余1个degenerate
         return 0
-    # 2.不能超过K个错配
+    # 2. mismatch number <= K
     mismatch_num = len([x for x in match_list if "mismatch" in x])
     if mismatch_num > K:
         return 0
-
-    # 3.能够amplify的情况，计算amp概率，最简单都为1
+    # 3. sucessful amplification
     return 1
 
 
@@ -118,7 +115,7 @@ def parse_blastTxt(blast_txt="/data3/hyzhang/ont/16s_RNA_seg/res/blast_res/query
     return blast_df
 
 
-# 获取Ecoli相对位置的函数
+# get the position of primer in Ecoli_K12 genome
 def get_PP_position_Ecoli_K12(
     f_pri,
     r_pri,
@@ -159,3 +156,97 @@ def get_PP_position_Ecoli_K12(
 
     os.system(f"rm -r ./{temp_dir}")
     return info_t
+
+
+# check the off-target amplification of primer
+def offTarget_amplicon_check(
+    f_pri,
+    r_pri,
+    offTarget_db="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs",
+    offTarget_df="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta",
+    permitted_mismatch=1, 
+    stringent_mode=False # if True, the any one of the primer pair has off-target amplification, then remove this primer pair
+    ):
+    rand_int = random.randint(9931, 99419)
+    temp_dir = f"temp_offTarget_{rand_int}"
+    os.makedirs(temp_dir, exist_ok=True)
+    records = [
+        SeqRecord(seq=Seq(f_pri), id="forward", description=""),
+        SeqRecord(seq=Seq(r_pri), id="reverse", description=""),
+    ]
+    with open(f"./{temp_dir}/temp_al.fna", "w") as f:
+        SeqIO.write(records, f, "fasta")
+    offTarget_df = SeqIO.parse(offTarget_df, "fasta")
+    offTarget_df = pd.DataFrame(
+        [[x.id, str(x.seq)] for x in offTarget_df], columns=["seq_id", "ATGC"]
+    )
+    offTarget_df.set_index("seq_id", inplace=True)
+    
+    def get_ref_atgc(x):
+        # 注意现在有可能q的start-end覆盖不住
+        full_ref = offTarget_df.loc[x["subject_acc.ver"], "ATGC"]
+        start_, end_ = int(x["s._start"]), int(x["s._end"])
+        start_q, end_q = int(x["q._start"]), int(x["q._end"])
+        if end_ > start_:
+            start_ = start_ - (start_q - 1)
+            end_ = end_ + (len(f_pri) - end_q)
+            ref_seq_ = full_ref[start_ - 1 : end_]
+            ref_seq_ = "".join(
+                [degenerate_base_table[s][0] for s in list(ref_seq_)]
+            )
+            return ref_seq_
+        else:
+            start_ = start_ + (start_q - 1)
+            end_ = end_ - (len(r_pri) - end_q)
+            ref_seq_ = full_ref[start_ - 1 : end_ - 2 : -1]
+            ref_seq_ = "".join(
+                [
+                    (atgc_to_complement[degenerate_base_table[s][0]])
+                    for s in list(ref_seq_)
+                ]
+            )
+            return ref_seq_
+
+    try:
+        blast_cmd(
+            f"./{temp_dir}/temp_al.fna", db=offTarget_db, out_path=f"./{temp_dir}/temp_blast.txt", evalue=100
+        )
+        blast_df = parse_blastTxt(blast_txt=f"./{temp_dir}/temp_blast.txt")
+        blast_df["evalue"] = pd.to_numeric(blast_df["evalue"], errors="coerce")
+        blast_df['alignment_length'] = pd.to_numeric(blast_df['alignment_length'], errors='coerce')
+        blast_df = blast_df[blast_df['alignment_length'] > 9].reset_index(drop=True)
+        blast_df = blast_df.loc[
+            blast_df.groupby(["query_acc.ver", "subject_acc.ver"])["evalue"].idxmin(),
+        ].reset_index(drop=True)  # de-replicated
+        blast_df["ref_seq"] = blast_df.apply(lambda x: get_ref_atgc(x), axis=1)
+        
+        offTarget_info_t = {'forward': [], 'reverse': []}
+        for pri_ty in ["forward", "reverse"]:
+            df_ = blast_df[blast_df["query_acc.ver"] == pri_ty].reset_index(drop=True)
+            df_['pri_seq'] = f_pri if pri_ty == "forward" else r_pri
+            df_['bind_prob'] = df_.apply(lambda x: primer_binding_probability(x['pri_seq'], x['ref_seq'], K=permitted_mismatch), axis=1)
+            df_binded = df_[df_['bind_prob'] > 0]
+            offTarget_info_t[pri_ty] += df_binded['subject_acc.ver'].tolist()
+    except:
+        offTarget_info_t = {'forward': [], 'reverse': []}
+    
+    print('off-target seqs of each primer: ', offTarget_info_t)
+    if stringent_mode:
+        offTarget_info_final = list(set(offTarget_info_t['forward'] + offTarget_info_t['reverse']))
+    else:
+        offTarget_info_final = [x for x in offTarget_info_t['forward'] if x in offTarget_info_t['reverse']]
+    
+    os.system(f"rm -r ./{temp_dir}")
+    return offTarget_info_final
+    
+    
+if __name__ == '__main__':
+    pri_pair = ['GTGCCAGCMGCCGCGG', 'CCGTCAATTCMTTTRAGTTT']
+    # offTarget_amplicon_check(pri_pair[0], pri_pair[1])
+    
+    uni_pris = pd.read_excel('Model_data/OffTarget_amplicon_check/primers_offTarget_test.xlsx')
+    for pri_i in range(uni_pris.shape[0]):
+        pri_f, pri_r = uni_pris.loc[pri_i, ['forward_seq', 'reverse_seq']]
+        print("Checking off-target amplification of primer pair: ", uni_pris.loc[pri_i, 'pri_nm'])
+        offTarget_res = offTarget_amplicon_check(pri_f, pri_r, permitted_mismatch=5)
+        print("off-target seqs: ", offTarget_res)
