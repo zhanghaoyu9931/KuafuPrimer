@@ -14,16 +14,15 @@ from KuafuPrimerFuncs import *
 
 
 def blast_to_silvaRef(input_fna, output_txt):
+    # [deplicated] use the abundance table as the input now.
     def mothur_class(input_fna):
         os.system(f"bash classify_seqs.sh {input_fna}")
-
-        # 获取信息
         taxa_level_dict = ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus"]
         meta_res = input_fna.replace(".fasta", ".nr_v138_1.wang.taxonomy")
         df_metagenome = pd.read_csv(meta_res, sep="\t", header=None)
         df_metagenome.columns = ["reads_nm", "taxonomic_info"]
 
-        # 返回taxa分类结果
+        # accuracy of different taxa level
         for i, taxa_ln in enumerate(taxa_level_dict):
             df_metagenome[taxa_ln] = df_metagenome["taxonomic_info"].apply(
                 lambda x: x.split(";")[i].split("(")[0]
@@ -44,7 +43,7 @@ def blast_to_silvaRef(input_fna, output_txt):
         drop=True
     )
 
-    # 返回genus table
+    # return the genus table
     srr_id = os.path.basename(output_txt).split("_")[0]
     df_metagenome["Genus"] = df_metagenome["Genus"].apply(
         lambda x: "unclassified" if "unclassified" in x else x
@@ -54,11 +53,10 @@ def blast_to_silvaRef(input_fna, output_txt):
     # 根据pandas版本不同，这里可能会报错：Genus改成count即可
     df_metagenome.rename(columns={"count": srr_id}, inplace=True)
     df_metagenome["Genus"] = list(df_metagenome.index)
-    # 1006：重新reset index一下
+    # reset index
     df_metagenome.reset_index(drop=True, inplace=True)
-    # 1107: 保留大于10[5]条reads的那些genus，但是计算相对丰度的时候保留了所有的
     df_metagenome = df_metagenome[df_metagenome[srr_id] >= 10].reset_index(drop=True)
-    # 归一化，得到相对丰度矩阵
+    # get the relative abundance
     df_metagenome[srr_id] = df_metagenome[srr_id] / all_reads
     return df_metagenome
 
@@ -77,13 +75,12 @@ def design_pri_vregion(
     rm_tmp_files,
     step_search,
 ):
-    # 使用fastPrimer to design primers
+    # fastPrimer to design primers
     if ("v9" in vv) or ("v1" in vv):
-        mismatch_cutoff = 0.75  # v9区域稍微放松一些要求
+        mismatch_cutoff = 0.75  # release for v9
     else:
-        mismatch_cutoff = 0.9  # 1231：这个阈值不应该很低
-
-    # zhy：调整的时候可以重点调一下deletion_cutoff调小一点、genus_every_spe调整下
+        mismatch_cutoff = 0.9  # this threshold could be high
+        
     design_primer(
         microbiota_target="designed_primers",
         core_microbiota=core_micro,
@@ -92,7 +89,7 @@ def design_pri_vregion(
         num_every_spe=num_every_spe,
         representative_seqs_pick_method="random",
         extend_bp_num=extend_bp_num,
-        deletion_cutoff=0.99,  # 下面是一些设计引物时候的参数
+        deletion_cutoff=0.99,  # parameters for primer design
         mismatch_cutoff=mismatch_cutoff,
         primer_lens_list=primer_lens_list,
         taxo_df=taxo_df,
@@ -120,27 +117,25 @@ def primer_design_main(
     rm_tmp_files=True,
     step_search=1,
 ):
-    ### 第一部分：处理sample文件，获取里面有哪些genus
-    # 数据存放的output路径
+    ### get the genus profile
+    # output dir
     os.makedirs(output, exist_ok=True)
     df_input = pd.read_csv(input_csv)
 
     df_samples_genus_table = None
     sample_abun_tb = os.path.join(output, f"samples_abundanceTab.csv")
     if input_type == "genera_profiling":
-        # 输入文件是genera profile
+        # genus profile as input directly
         shutil.copy(input_csv, sample_abun_tb)
 
     if os.path.exists(sample_abun_tb):
-        df_samples_genus_table = pd.read_csv(sample_abun_tb)  # 如果已经存在了，那么不需要再跑这一步骤
+        df_samples_genus_table = pd.read_csv(sample_abun_tb) 
     else:
         for srr, fna in zip(
             list(df_input["srr_id"]), list(df_input[f"{NGS_mode}_file"])
         ):
-            # 每一个srr进行一次blast
             bla_out_txt = os.path.join(output, f"{srr}_taxa.csv")
             df_now = blast_to_silvaRef(fna, bla_out_txt)
-            # 合并cnt table
             if df_samples_genus_table is None:
                 df_samples_genus_table = df_now
             else:
@@ -149,7 +144,7 @@ def primer_design_main(
                 )
         df_samples_genus_table.to_csv(sample_abun_tb, index=False)
 
-    # 20231114：加入相对丰度阈值筛选 & 名称标准化
+    # clear the genus table
     df_samples_genus_table = df_samples_genus_table[
         df_samples_genus_table.iloc[:, 1:].sum(axis=1) > abun_cutoff
     ]
@@ -158,13 +153,13 @@ def primer_design_main(
     )
     df_samples_genus_table = df_samples_genus_table[
         df_samples_genus_table["Genus"].isin(list(taxo_df["genus_name"]))
-    ]  # 看看ncbi 哪些genus存在于我们的SIKLVA中
+    ]  # genu name should be in the database
     df_samples_genus_table.reset_index(inplace=True, drop=True)
     df_samples_genus_table.to_csv(
         sample_abun_tb.replace("abundanceTab", "abundanceTab_clean"), index=False
     )
 
-    ### 第二部分：获取用于引物设计的genus profile
+    ### get the core microbiota for primer design
     core_micro = list(df_samples_genus_table["Genus"])
     pool = multiprocessing.Pool(processes=thread_num)  # parallel to accelerate
     for vv in tqdm(vs_list):
@@ -240,7 +235,7 @@ def parse_args():
     parser.add_argument(
         "--SILVA_set_pred_16sDeepSeg",
         type=str,
-        default="Model_data/Silva_ref_data/SILVA_set_segmentation_DeepAnno16.csv", # 要看一下是不用rightID的版本
+        default="Model_data/Silva_ref_data/SILVA_set_segmentation_DeepAnno16.csv", # the right ID version
         help="Reference dataset 1.",
     )
     parser.add_argument(
@@ -279,38 +274,38 @@ if __name__ == "__main__":
     args = parse_args()
     input_csv = args.input
     output = args.out_root
-    target_vregions = args.target_vs.split(";")  # 读入target_vregions
+    target_vregions = args.target_vs.split(";")  # target_vregions
     NGS_mode = args.NGS_mode
     extend_bp_num = args.extend_bp_num
-    num_every_spe = args.num_every_spe  # 1105加上的
+    num_every_spe = args.num_every_spe
     input_type = args.input_type
     step_search = args.step_search
 
     lens_min, lens_max = args.primer_lens_range.split(",")
     primer_lens_list = [i for i in range(int(lens_min), int(lens_max))]
-    thread_num = args.thread  # 1123: 加入并行计算加速运算过程
-    rand_seed = args.rand_seed  # 0102: 加入来确定划分的seqs是哪些 & 默认是None纯随机
-    rm_tmp_files = args.rm_tmp_files # 20240425: 加入来确定是否删除中间文件
+    thread_num = args.thread  # multi-thread
+    rand_seed = args.rand_seed  # default None
+    rm_tmp_files = args.rm_tmp_files # remove the tmp files
     
     ## 20231107: set the dataset ##
     # taxonomic informations
     taxo_df = pd.read_csv(args.ref_meta_df)
     taxo_df["genus_name"] = taxo_df["Genus"].apply(
         lambda x: ("_".join(x.split())).lower()
-    )  # 把subs genus信息使用_连接（之前是空格连接的）
+    )
     id_seqs_df = pd.read_csv(args.ref_id_seqs)
     # read 16sDeepSeg demarcation results
     pred_16sDeepSeg_df = pd.read_csv(args.SILVA_set_pred_16sDeepSeg)
     pred_16sDeepSeg_df.rename(
         columns={"id": "silva_id"}, inplace=True
-    )  # 把所有id都纠正过来使用silva_id而不是wrong的id
+    )  # use correct ID version
     # merge dfs
     SILVA_set_pred_16sDeepSeg = pd.merge(
         id_seqs_df, pred_16sDeepSeg_df, on="silva_id", how="inner"
     )
     print(f"Total set has {SILVA_set_pred_16sDeepSeg.shape[0]} seqs.")
 
-    ## 开始运行
+    ## running the main func ##
     start_time = datetime.datetime.now()
     primer_design_main(
         input_csv,
@@ -326,7 +321,7 @@ if __name__ == "__main__":
         thread_num=thread_num,
         rand_seed=rand_seed,
         rm_tmp_files=rm_tmp_files,
-        step_search=step_search, # 20240831: 每隔多少位置提取一个candidate primer
+        step_search=step_search, # candidate primer search step
     )
     os.system("rm ./*mothur*")
     end_time = datetime.datetime.now()

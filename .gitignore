@@ -16,3 +16,6 @@ Model_data/DeepAnno16_publicated_model
 submission.ipynb
 Table_S5.xlsx
 Model_data/OffTarget_amplicon_check/MITOBANK_6w*
+Model_data/OffTarget_amplicon_check/offTarget_plants_seqs*
+Model_data/OffTarget_amplicon_check/offTarget_olive_seqs*
+Model_data/OffTarget_amplicon_check/offTarget_test*

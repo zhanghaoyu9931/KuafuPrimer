@@ -16,7 +16,7 @@ import datetime
 from common_utils import *
 
 ## global vars
-flip_bp_add = 20  # amplicon两端20bp的序列被加入进去
+flip_bp_add = 20  # 20bp extension at both ends of the amplicon
 NGS_platform_error = (
     {  # from: "Sequencing error profiles of Illumina sequencing instruments"
         "MiSeq": [0.473, 0.983],
@@ -54,27 +54,25 @@ def parse_blastTxt_getAmplicon(
     blast_df.columns = index_line
     blast_df = blast_df.apply(pd.to_numeric, errors="ignore")
 
-    # 进行amplicon与否的几个条件筛选
+    # sucessful amplification must meet the following criteria:
+    # 1. no gap opens
+    blast_df = blast_df[blast_df["gap_opens"] < 1].reset_index(drop=True)
     # blast_df = (
     #     blast_df.groupby("query_acc.ver").head(100).reset_index(drop=True)
-    # )  # 为了加快速度
-    # 1.不允许gap
-    blast_df = blast_df[blast_df["gap_opens"] < 1].reset_index(drop=True)
-    # 2.覆盖引物全长: 1226放松一些，最多有5个少的alignment
+    # )  # fast mode for debug
+    # 2. alignment length > 5
     blast_df = blast_df[
         blast_df[["query_acc.ver", "alignment_length"]].apply(
             lambda x: x["alignment_length"] > 5, axis=1
         )
     ]  # fr_pri_length[x["query_acc.ver"]] - 5
-    # 3.拿出引物序列和参考序列
+    # 3. get the primer and template sequence (full-length of primer)
     silva_ref_atgc.index = silva_ref_atgc["silva_id"]
-    # blast_df['pri_seq'] = blast_df.apply(lambda x: fr_pri_atgc[x["query_acc.ver"]][x['q._start'] - 1: x['q._end']], axis=1)
     blast_df["pri_seq"] = blast_df.apply(
         lambda x: fr_pri_atgc[x["query_acc.ver"]], axis=1
-    )  # 无论如何都是引物全长
+    )  # full-legth of primer
 
     def get_ref_atgc(x):
-        # 注意现在有可能q的start-end覆盖不住
         full_ref = silva_ref_atgc.loc[x["subject_acc.ver"], "16s_rna"]
         start_, end_ = x["s._start"], x["s._end"]
         start_q, end_q = x["q._start"], x["q._end"]
@@ -93,9 +91,18 @@ def parse_blastTxt_getAmplicon(
                 ]
             )
             return ref_seq_
-
+    # blast_df = blast_df[
+    #     (
+    #         (blast_df["query_acc.ver"] == "forward")
+    #         & (blast_df["s._end"] > blast_df["s._start"])
+    #     )
+    #     | (
+    #         (blast_df["query_acc.ver"] == "reverse")
+    #         & (blast_df["s._end"] < blast_df["s._start"])
+    #     )
+    # ].reset_index(drop=True) # [maybe open] forward primer needs to be in the forward strand, and reverse primer needs to be in the reverse strand
     blast_df["ref_seq"] = blast_df.apply(lambda x: get_ref_atgc(x), axis=1)
-    # 4.计算amplicon成功的概率
+    # 4. get the in-silico PCR amplicons (including length, Tm and binding probability)
     blast_df = blast_df.loc[
         blast_df.groupby(["query_acc.ver", "subject_acc.ver"])["evalue"].idxmin(),
     ]  # de-replicated
@@ -116,7 +123,6 @@ def parse_blastTxt_getAmplicon(
             "reverse_pri" not in list(x["query_acc.ver"])
         ):
             # successful amplification needs both forward and reverse primers matched
-            # print(x)
             return pd.DataFrame([amplicon_info])
         x.index = x["query_acc.ver"]
         amplicon_info["pcr_start"], amplicon_info["pcr_end"] = (
@@ -153,7 +159,7 @@ def parse_blastTxt_getAmplicon(
 
 
 def parse_pcr_ali_res(fna_aligned):
-    # 解析align出来的结果
+    # parse the alignment result
     res_df = []
     recs = SeqIO.parse(fna_aligned, "fasta")
     for rec in recs:
@@ -172,7 +178,7 @@ def parse_pcr_ali_res(fna_aligned):
         res_df.append(res_now)
 
     if len(res_df) == 0:
-        ## not found any hit
+        # not found any hit
         res_now = {
             "silva_id": "aaa",
             "pcr_start": -1,
@@ -185,7 +191,7 @@ def parse_pcr_ali_res(fna_aligned):
 
 
 def simulate_sequencing_errors(sequence, NGS_platform="", PE_lens=300):
-    # 1226: simulate the sequencing errors
+    # func to simulate the sequencing errors
     error_mean, error_std = NGS_platform_error[NGS_platform]
     error_rate = (
         np.random.normal(error_mean, error_std) / 100
@@ -194,7 +200,6 @@ def simulate_sequencing_errors(sequence, NGS_platform="", PE_lens=300):
     overlap = [len(sequence) - PE_lens, PE_lens]
 
     # error_rate_all_pos = np.arr
-
     for i in range(len(sequence)):
         current_base = sequence[i]
         current_base = degenerate_base_table[current_base][0]
@@ -214,7 +219,7 @@ def simulate_sequencing_errors(sequence, NGS_platform="", PE_lens=300):
 
 
 def write_fasta(df_to_fasta, sequencing_error="no"):
-    # 写入fasta文件
+    # write the fasta file
     recs = []
     for i in range(df_to_fasta.shape[0]):
         p_start, p_end, seq_full, f_bind_p, r_bind_p = (
@@ -225,18 +230,17 @@ def write_fasta(df_to_fasta, sequencing_error="no"):
             float(df_to_fasta.loc[i, "r_bind_p"]),
         )
         if p_start < 0:
-            # 哪些primerMatch没有扩增到的序列就不再classify了
-            # 实际上没有扩增到的序列在这里就不会有
+            # not be successfully amplified
             continue
         if random.uniform(0, 1) > (f_bind_p * r_bind_p):
-            # 按照f-bind-p * r-bind-p的概率成功扩增
+            # sucessful amplification according to the binding probability
             continue
 
         p_start = max(p_start - flip_bp_add, 0)
         p_end = min(p_end + flip_bp_add, len(seq_full))
         seq_amplicon = seq_full[p_start:p_end]
         if sequencing_error != "no":
-            # 加入测序错误
+            # simulate the sequencing errors
             seq_amplicon = simulate_sequencing_errors(seq_amplicon, sequencing_error)
         rec = SeqRecord(
             seq=Seq(seq_amplicon),
@@ -249,10 +253,10 @@ def write_fasta(df_to_fasta, sequencing_error="no"):
 
 def otu_and_class(fa, minsize, randid):
     uni_fa = f"./uniques_{randid}.fa"
-    # Find unique read sequences and abundances
+    # find unique read sequences and abundances
     cmd1 = f"usearch -fastx_uniques {fa} -sizeout -relabel Uniq -fastaout {uni_fa}"
 
-    # Make 97% OTUs and filter chimeras
+    # make 97% OTUs and filter chimeras
     otu_fa = f"./otu_{randid}.fa"
     zotu_fa = f"./zotu_{randid}.fa"
     cmd2 = (
@@ -260,7 +264,7 @@ def otu_and_class(fa, minsize, randid):
     )
     cmd3 = f"usearch -unoise3 {uni_fa} -zotus {zotu_fa}"
 
-    # Classify every amplicon
+    # classify every amplicon
     silva_template = "./Model_data/Silva_ref_data/silva.nr_v138_1.align"
     taxo_ref = (
         "./Model_data/Silva_ref_data/silva.nr_v138_1.tax"
@@ -294,7 +298,7 @@ def after_pcr(pcr_df, ref_df_selectedGenus, rand_label, sequencing_error="MiSeq"
     res_of_this_pri_df = pd.merge(
         ref_df_selectedGenus,  # ref_metadf,
         pcr_df,
-        how="left",  # 这边是按照所有的genus ref seq来进行的，所以哪些pcr没法扩增的序列会为NaN
+        how="left",  # merge to all seqs
         left_on="silva_id",
         right_on="silva_id",
     )
@@ -306,7 +310,6 @@ def after_pcr(pcr_df, ref_df_selectedGenus, rand_label, sequencing_error="MiSeq"
     # simulate amplicon, cluster otu and classify
     amplicon_recs = write_fasta(res_of_this_pri_df, sequencing_error=sequencing_error)
     if len(amplicon_recs) < 10:
-        # 出错了直接返回
         print("Amplicon_recs have small size!")
         res_of_this_pri_df.to_csv(f"./res_of_this_pri_df_{rand_label}.csv", index=False)
         return None, 0.0, 0.0
@@ -320,7 +323,7 @@ def after_pcr(pcr_df, ref_df_selectedGenus, rand_label, sequencing_error="MiSeq"
     res_of_this_pri_df.drop(
         [
             "taxa_info_summary",
-            # "16s_rna", 1107: 直接从metainfo里面去掉了16s_rna这一列
+            # "16s_rna",  # deplete this col in meta info
         ],
         axis=1,
         inplace=True,
@@ -344,7 +347,7 @@ def after_pcr(pcr_df, ref_df_selectedGenus, rand_label, sequencing_error="MiSeq"
 def primer_classify_acc(pri_insilico_df):
     pri_insilico_df.fillna("", inplace=True)
 
-    # 先总体计算指标: 注意这里的准确率是seqs-level的
+    # sequence level accuracy
     compare_index_all = {}
     all_n = pri_insilico_df.shape[0]
     pri_amp_eff_all = pri_insilico_df[
@@ -352,7 +355,7 @@ def primer_classify_acc(pri_insilico_df):
         & (pri_insilico_df["f_bind_p"] * pri_insilico_df["r_bind_p"] > 0.5)
     ].shape[
         0
-    ]  # 1230: 加入真实情况的amplicon
+    ]
     pri_amp_eff_all /= all_n
     compare_index_all["pri_amp_eff"] = pri_amp_eff_all
     compare_index_all["pri_amp_eff_Tm"] = (
@@ -362,17 +365,17 @@ def primer_classify_acc(pri_insilico_df):
             & (pri_insilico_df["r_bind_Tm"] >= 55)
         ].shape[0]
         / all_n
-    )  # 0102: 根据Tm来测算是否amplicon
-    # 1.2：加入更细致的判断--因为forward还是reverse而丢掉的比率
+    )  # meet the Tm requirement
+    # 1.2: the forward and reverse primer binding probability
     compare_index_all["pri_amp_eff_forward"] = pri_insilico_df["f_bind_p"].mean()
     compare_index_all["pri_amp_eff_reverse"] = pri_insilico_df["r_bind_p"].mean()
-    for tax in taxa_level[:6]:  # 不关注species
+    for tax in taxa_level[:6]:  # drop species level
         pri_withTruelabel = pri_insilico_df[
             pri_insilico_df[tax].apply(lambda x: len(x) > 1)
         ]
         pri_withTruelabel.reset_index(inplace=True, drop=True)
 
-        # 1123: 更改genus名称再分类
+        # clear the tax names
         pri_withTruelabel[tax] = pri_withTruelabel[tax].apply(
             lambda x: ("_".join(x.split())).lower()
         )
@@ -392,14 +395,14 @@ def primer_classify_acc(pri_insilico_df):
     return compare_index_all
 
 
-# dimer和hairpin检查
 def check_dimer_hairpin(
     f_atgc, r_atgc, DimerAndHairpin_exam_root="./DimerAndHairpin_exam"
 ):
+    # dimer和hairpin检查
     os.makedirs(DimerAndHairpin_exam_root, exist_ok=True)
     randlabel = random.randint(1, 999999)
     while os.path.exists(f"{DimerAndHairpin_exam_root}/primer_pair{randlabel}.fa"):
-        # 避免出现和其他文件冲突的情况
+        # avoid the conflict
         randlabel = random.randint(1, 999999)
     dimer_flag, hairpin_flag = False, False
 
@@ -447,11 +450,10 @@ def main_func(
     sequencing_error="MiSeq",
     rand_seed=99419,
     num_every_spe=50,
-    envi_forEva_selectedID=None # 限定一下只能使用哪些范围的silva id的序列
+    envi_forEva_selectedID=None # select the silva id to be used
 ):
     rand_label = random.randint(9931, 99419)
     while os.path.exists(f"./testPrimer{rand_label}.txt"):
-        # 避免出现和其他文件冲突的情况
         rand_label = random.randint(9931, 99419)
 
     # write the primer txt
@@ -463,19 +465,19 @@ def main_func(
             f.write(">forward_pri\n" + pri_pair[0] + "\n")
             f.write(">reverse_pri\n" + pri_pair[1] + "\n")
 
-    # 筛选目标genus的序列，如果fast mode则每个genus只选择30条
+    # get the target genus profile
     ref_df_selectedGenus = ref_metadf[
         ref_metadf["genus_name"].isin(genus_select)
     ]
     if envi_forEva_selectedID is not None:
-        # 20240102: 加入限定序列的silva id范围的限制
+        # select the silva id to be used
         ref_df_selectedGenus = ref_df_selectedGenus[ref_df_selectedGenus['silva_id'].isin(envi_forEva_selectedID)]
 
     def rand_samp(group, gp_num_fast_mode=num_every_spe):
         # Key: the global parameter couble be modifed
         return group.sample(
             n=min(gp_num_fast_mode, len(group)), random_state=rand_seed
-        )  # 使用特定种子确保可重复性
+        )  # set the random seed
 
     if very_fast_mode:
         ref_df_selectedGenus = pd.DataFrame(
@@ -484,18 +486,16 @@ def main_func(
         ref_df_selectedGenus.reset_index(inplace=True, drop=True)
     ref_df_selectedGenus.reset_index(inplace=True, drop=True)
 
-    # 1226：为了加快速度，每次仅用需要in-silico PCR的这些序列来构建blast-db
+    # accelerate the process
     if amplicon_method == "pcr_match":
         # run the pcr_match
         output = f"temp_res{rand_label}.txt"
         pcr_match(ref_fa=ref_fa, primer_txt=primer_txt, K=K, output=output)
 
         # after pcr
-        
         align_df = parse_pcr_ali_res(output)
     elif amplicon_method == "haoyu":
-        # 20231224: 换用blastn来进行比对，自己确定amplicon是否匹配
-        # 构建blast database
+        # use blastn to get the amplicon
         print(ref_df_selectedGenus.head())
         selectedGenus_recs = [
             SeqRecord(
@@ -511,11 +511,10 @@ def main_func(
         os.system(
             f"makeblastdb -in {selectedGenus_fa} -dbtype nucl -out {selectedGenus_fa_ncbidb}"
         )
-        # 做blastn
         output = f"temp_res_blast{rand_label}.txt"
         blast_cmd(primer_txt, db=selectedGenus_fa_ncbidb, out_path=output)
         
-        # 读取blast结果并做初筛
+        # read the blast res
         try:
             blast_df = parse_blastTxt_getAmplicon(
                 blast_txt=output,
@@ -531,7 +530,6 @@ def main_func(
             )
             align_df = blast_df.copy()
         except:
-            # 如果blast失败则给一个为零的值
             os.system(f"rm ./*{rand_label}* ./*mothur* {selectedGenus_fa_ncbidb}* {selectedGenus_fa}")
             return None, 0, 0, None
     if (
@@ -541,7 +539,7 @@ def main_func(
         ].shape[0]
         < 3
     ):
-        # 数据量太少了也返回
+        # too few amplicons
         os.system(f"rm ./*{rand_label}* ./*mothur* {selectedGenus_fa_ncbidb}* {selectedGenus_fa}")
         return None, 0, 0, None
 
@@ -561,11 +559,10 @@ def main_func(
     return res_of_this_pri_df, otu_n, zotu_n, acc_index
 
 
-## 获得用来进行验证的候选primers
 def get_designed_primer(
     designed_pri_dir="./demo_dir", v_region="v3v4", temp_dir="", K=1
 ):
-    # 只利用相关v区域的primers
+    # get the desigend primer pairs
     envi_nm = os.path.basename(designed_pri_dir)
     vs_dir = f"{designed_pri_dir}/designed_primers"
     primer_pairs = []
@@ -585,12 +582,12 @@ def get_designed_primer(
         DimerAndHairpin_exam_root = os.path.join(temp_dir, "DimerAndHairpin_exam")
         os.makedirs(DimerAndHairpin_exam_root, exist_ok=True)
 
-        # 接下来抽取排名靠前的fp和rp组合成primer pairs & 最多100个候选
+        # make primer pairs between top 10 forward and reverse primers (100 candidates at most)
         fp_list = list(forward_df["primer_atgc"])[:10]
         rp_list = list(reverse_df["primer_atgc"])[:10]
 
         pp_loc_list = []
-        # 逻辑：先加入[0, 0] [1, 0] [0, 1] [1, 1]这些排名靠前的组合，而不是先遍历fr
+        # [0, 0] [1, 0] [0, 1] [1, 1] is the order
         for i in range(min(len(fp_list), len(rp_list))):
             for j in range(i + 1):
                 for k in range(i + 1):
@@ -614,10 +611,10 @@ def get_designed_primer(
             pri_nm = f"{envi_nm}_{v_region}_{f_i}f{r_i}r"
             f_Tm, r_Tm = forward_df.loc[f_i, "Tm"], reverse_df.loc[r_i, "Tm"]
             if abs(f_Tm - r_Tm) > 5:
-                # 超过5C的退火温度的不能成pair
+                # Tm difference should be less than 5
                 continue
 
-            # dimer和hairpin检查
+            # check dimer and hairpin
             dimer_flag, hairpin_flag = check_dimer_hairpin(f_atgc, r_atgc)
             if dimer_flag or hairpin_flag:
                 continue
@@ -625,7 +622,7 @@ def get_designed_primer(
             primer_pairs.append(pri_atgc)
             primer_pairs_nm.append(pri_nm)
 
-        # 删除中间文件
+        # rm temp files
         os.system(f"rm -r {DimerAndHairpin_exam_root}")
         return primer_pairs, primer_pairs_nm
 
@@ -637,12 +634,11 @@ def get_designed_primer(
 def get_additional_primers(
     pris_xlsx="data/primers.xlsx", targetVregion=""
 ):
-    # 原本的获取uni pri: get_universal_1000primers
     if pris_xlsx.endswith(".csv"):
         pris_df = pd.read_csv(pris_xlsx)
     else:
         pris_df = pd.read_excel(pris_xlsx)
-    ## add universal primers
+    # add universal primers
     primer_pairs = []
     primer_pairs_nm = []
 
@@ -676,7 +672,7 @@ def parse_args():
         help="The microbial community in which the primer performance is to be evaluated.",
     )
     parser.add_argument( 
-        "--envi_forEva_selectedID", # 0102: 加入一个可以给定silva-id的方式-为了方便设定一部分silva id作为训练集另一部分作为测试集合
+        "--envi_forEva_selectedID",
         type=str,
         default="",
         help="Set silva ids that are allowed to eva.",
@@ -720,7 +716,7 @@ def parse_args():
     parser.add_argument(
         "--num_every_spe", type=int, default=20, help="num for choosing seqs."
     )
-    # 20231107: 加入参数允许指定用于比较的参考数据库
+    # parameters to set the reference database
     parser.add_argument(
         "--ref_fa",
         type=str,
@@ -748,7 +744,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    primers_forEva = [f"{x}" for x in args.primers_forEva.split(";")]  # 多个路径同时处理了
+    primers_forEva = [f"{x}" for x in args.primers_forEva.split(";")]  # multiple primer sets to be evaluated
     envi_forEva = args.envi_forEva
     envi_forEva_selectedID = args.envi_forEva_selectedID
     if envi_forEva_selectedID.endswith('.txt'):
@@ -756,7 +752,7 @@ if __name__ == "__main__":
             envi_forEva_selectedID = list(f.readlines())
             envi_forEva_selectedID = [x.strip('\n') for x in envi_forEva_selectedID]
     else:
-        envi_forEva_selectedID = None # 默认情况不设定该参数
+        envi_forEva_selectedID = None # default None
      
     targetVregions = args.target_vs.split(
         ";"
@@ -764,12 +760,12 @@ if __name__ == "__main__":
     amplicon_method = args.amplicon_method
     sequencing_error = args.sequencing_error
     K = args.K
-    num_condidate_pris = int(args.num_condidate_pris)  # 1106: 设定每个
+    num_condidate_pris = int(args.num_condidate_pris) 
     additional_pri_excel = (
         args.additional_primers
-    )  # 1106: 加入自选选项，可以添加用户自己的引物用于一起比较，默认情况下是通用引物列表
-    thread_num = args.thread  # 1123: 加入并行计算加速运算过程
-    # 20231107: reference database parameters
+    )
+    thread_num = args.thread
+    # reference database parameters
     ref_fa = args.ref_fa
     ref_metadf = pd.read_csv(args.ref_meta_df)
     ref_idseqs = pd.read_csv(args.ref_id_seqs)
@@ -785,9 +781,9 @@ if __name__ == "__main__":
         lambda x: ("_".join(x.split())).lower()
     )
     print(f"Reference database Seqs num: {ref_metadf.shape}")
-    # 20231107: very fast runing mode
+    # very fast runing mode
     very_fast_mode = args.very_fast
-    rand_seed = args.rand_seed  # 选择50个genus的依据的rand_seed
+    rand_seed = args.rand_seed  # rand_seed
     num_every_spe = args.num_every_spe
     if very_fast_mode:
         print(f"Running in fast mode at the expense of some accuracy.")
@@ -812,14 +808,14 @@ if __name__ == "__main__":
         primer_pos = get_PP_position_Ecoli_K12(pri_pair[0], pri_pair[1])
 
         if os.path.exists(f"{temp_dir}/{pri_nm}_res.csv"):
-            # default index: 如果已经有了csv则跳过
+            # avoid the repeat running
             acc_index = {"pri_amp_eff": 0.01}
             for tax_l in taxa_level:
                 acc_index[f"{tax_l}_accuracy"] = 0.01
             acc_index["otu_n"] = 0
             acc_index["zotu_n"] = 0
             acc_index["pri_nm"] = pri_nm
-            acc_index["pri_pair"] = pri_pair  # 1008：加入atgc序列信息
+            acc_index["pri_pair"] = pri_pair
             acc_index.update(primer_pos)
             return acc_index
 
@@ -844,7 +840,7 @@ if __name__ == "__main__":
             acc_index["otu_n"] = 0
             acc_index["zotu_n"] = 0
             acc_index["pri_nm"] = pri_nm
-            acc_index["pri_pair"] = pri_pair  # 1008：加入atgc序列信息
+            acc_index["pri_pair"] = pri_pair 
             acc_index.update(primer_pos)
             return acc_index
 
@@ -852,33 +848,32 @@ if __name__ == "__main__":
         acc_index["otu_n"] = otu_n
         acc_index["zotu_n"] = zotu_n
         acc_index["pri_nm"] = pri_nm
-        acc_index["pri_pair"] = pri_pair  # 1008：加入atgc序列信息
+        acc_index["pri_pair"] = pri_pair
         acc_index.update(primer_pos)
         return acc_index
 
     def pri_cov_eva(
         targetVregion="v3v4",
     ):
-        # 对于一个target V区域的引物进行验证
+        # evaluate the primer performance of a specific region
         temp_dir = os.path.join(root_dir, targetVregion)
         # if os.path.exists(f"{temp_dir}/resInfo.csv"):
-        #     # 如果已经做过insilico验证，就不再做了 - 0103去掉了 可以重复跑避免因为断掉而导致丢失
         #     return
         os.makedirs(temp_dir, exist_ok=True)
         print(f"Start to evaluate the primer performance of {targetVregion} region.")
 
-        ## 获取用来验证的primer list
+        ## primer list to be evaluated
         primer_pairs = []
         primer_pairs_nm = []
 
         for primer_forEva in primers_forEva:
             primer_pairs_t, primer_pairs_nm_t = get_designed_primer(
-                primer_forEva, targetVregion, temp_dir, K=K  # 加入按照cov-k计算规则
+                primer_forEva, targetVregion, temp_dir, K=K 
             )
 
             primer_pairs += primer_pairs_t[
                 :num_condidate_pris
-            ]  # 1106: 只加入一定量的primer用于比较
+            ] 
             primer_pairs_nm += primer_pairs_nm_t[:num_condidate_pris]
 
         primer_pairs_t, primer_pairs_nm_t = get_additional_primers(
@@ -890,8 +885,8 @@ if __name__ == "__main__":
         if len(primer_pairs) == 0:
             return None
 
-        ## 获取环境中的主要genus list
-        genus_select = pd.read_csv(envi_forEva)  # 1123: 修改为输入一个csv代表环境微生物
+        ## get the target genus list
+        genus_select = pd.read_csv(envi_forEva)  # input is a csv file
         genus_select["Genus"] = genus_select["Genus"].apply(
             lambda x: ("_".join(x.split())).lower()
         )
@@ -901,7 +896,7 @@ if __name__ == "__main__":
         genus_select = list(genus_select["Genus"])
 
         ## 开始验证
-        # 20240103: 筛除掉那些已经有_res.csv文件存在的引物 即不会重复跑
+        # avoid the repeat running
         primer_nm_atgc_no_overwrite = {pri_nm: pri_pair for pri_pair, pri_nm in zip(primer_pairs, primer_pairs_nm) if (not os.path.exists(f"{temp_dir}/{pri_nm}_res.csv"))}
         primer_pairs, primer_pairs_nm = list(primer_nm_atgc_no_overwrite.values()), list(primer_nm_atgc_no_overwrite.keys())
         
@@ -935,13 +930,13 @@ if __name__ == "__main__":
             return
         pris_df = pd.DataFrame(pris_df)
         if os.path.exists(f"{temp_dir}/resInfo.csv"):
-            # 保留原本的信息
+            # merge the results
             pris_df_ori = pd.read_csv(f"{temp_dir}/resInfo.csv") 
             pris_df = pd.concat([pris_df_ori, pris_df], axis=0)
             
         pris_df.to_csv(f"{temp_dir}/resInfo.csv", index=False)
 
-    ## 开始运行
+    ## running
     start_time = datetime.datetime.now()
     for targetVregion in targetVregions:
         pri_cov_eva(targetVregion)
