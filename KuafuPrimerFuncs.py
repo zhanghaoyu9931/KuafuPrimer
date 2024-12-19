@@ -14,13 +14,12 @@ from collections import Counter
 from common_utils import *
 
 #### 用到的一些funcs
-# 1219：将定义超保守的这些参数提取到此定义
 super_conserve_pos_cutoff = 0.995
 possible_conserve_pos_cutoff = 0.98  #
 degebase_cutoff = 0.001  # 大于多少频率的碱基纳入degebase的考虑范围
 cov_k_by = 0
 
-# 一些依据的table
+# atgc order table
 atgc_order = ["A", "T", "G", "C"]
 
 
@@ -710,7 +709,7 @@ def design_primer(
             out=os.path.join(target_v_root, fna_name_muscle + "_afterMuscle.fasta"),
         )
         with open(f"{target_v_root}/run_muscle.bash", "w") as f:
-            # TODO: 2023.0305: add otu cluster to reduce the time cost
+            # add otu cluster to reduce the time cost [deprecated]
             f.write(
                 "## Commandline for clustering seqs to OTUs with usearch tool.\n"
             )  # add comments
@@ -721,7 +720,7 @@ def design_primer(
                 f"usearch -fastx_uniques {file_in} -fastaout {uniq_file} -sizeout -relabel Uniq\n"
                 + f'usearch -cluster_otus {uniq_file} -otus {file_in} -relabel {fna_name_muscle.split("_")[0]}_target_\n'
             )
-            # f.write(usearch_cmd) # 这里是去掉了么？
+            # f.write(usearch_cmd) # 
 
             # Do multi-alignment using muscle.
             f.write(
@@ -760,19 +759,19 @@ def design_primer(
             mismatch_cutoff=mismatch_cutoff,
             primer_lens_list=primer_lens_list,
             forward_reverse=fr,
-            step_search=step_search # 引物设计的时候每隔多少bp选择一个candidate primer
+            step_search=step_search
         )
 
         return fr_primer_df
     
     fg = design_forwardOrReverse(target_vs[0], "forward", num_every_spe = num_every_spe, ratio_every_spe = ratio_every_spe)
     rg = design_forwardOrReverse(target_vs[1], "reverse", num_every_spe = num_every_spe, ratio_every_spe = ratio_every_spe)
-    # 删除中间文件
+    # rm tmp files
     if rm_tmp_files:
         for rm_file_nm in ["conserved", "pri_cov_temp", "run_muscle.bash"]:
             os.system(f"rm {target_v_root}/*{rm_file_nm}*")
     if (fg is None) or (rg is None):
-        return -1  # 没设计成功
+        return -1  # unable to design primer
     else:
         fg.to_csv(os.path.join(target_v_root, "forward_primer.csv"), index=False)
         rg.to_csv(os.path.join(target_v_root, "reverse_primer.csv"), index=False)

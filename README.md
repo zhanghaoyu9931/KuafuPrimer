@@ -81,13 +81,13 @@ To design the ecosystem specific primer pairs from the relevant genera profiling
 
 ```
 # set the input and output path
-demo_input=input/relevant_genera_profile_input/demo_input_EcoPrimer_ge_profile.csv
-demo_output=output/demo_output_EcoPrimer_ge_profile
+demo_input=input/demo_input_KuafuPrimer_ge_profile.csv
+demo_design_output=output/demo_output_KuafuPrimer
 
 # run the program
 python KuafuPrimer.py \
     --input $demo_input \ # Input file
-    --out_root $demo_output \ # Output dir
+    --out_root $demo_design_output\ # Output dir
     --input_type 'genera_profiling' \ # Input data type
     --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \ # The target V-regions.
     --extend_bp_num 50 \ # Number of extensive bp that will be included to design primer.
@@ -108,8 +108,8 @@ K_num=3
 
 # run the in-silico PCR program
 python Insilico_eva_primers.py \
-    --envi_forEva $demo_output \ # The samples in which the primer performance is to be evaluated.
-    --primers_forEva $demo_output \ # The designed primers to be evaluated.
+    --envi_forEva $demo_design_output'/samples_abundanceTab_clean.csv' \ # The abundance table of the target communities where the primer performance is to be evaluated.
+    --primers_forEva $demo_design_output\ # The designed primers to be evaluated.
     --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \ # The target V-regions.
     --K $K_num \ # The permitted mismatch numbers.
     --output $demo_PCR_output \ # The output dir.
@@ -121,13 +121,19 @@ python Screen_best_PP.py \
 
 ```
 
-The input for `envi_forEva` and `primers_forEva` is the output directory of primer design  procedure. This program will output the designed communities specific primer pair, the selected V-region and in-silico PCR accuracy of it:
+The input for `envi_forEva` and `primers_forEva` is the output directory of the primer design  procedure. This program will output the designed primer pair with minimal primer bias specific for the target communities, the selected V-region and in-silico PCR accuracy of it:
 
 ```
 Designed ecosystem specific primer pair for output/demo_PCR_output is ['GYCACAYTGGRACTGAGA', 'GGACTACCAGGGTATCTAA'], targeting v3v4 V-region, with 97.27% in-silico PCR amplicon accuracy.
 ```
 
-The detailed in-silico PCR performance and meta-information of every condidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory.
+It is worth noting that we provide additional support for in-silico PCR amplicon to address complex issues encountered in real sequencing platforms and application scenarios (optional functions):
+
+* **Sequencing error simulation:** By specifying the sequencing platform using the `--sequencing_error` parameter in the `Insilico_eva_primers.py` script, users can simulate sequencing errors. Multiple commonly used sequencing platforms are available for selection.
+* **Off-Target testing:** The `--offTarget_fasta` parameter in the `Screen_best_PP.py` allows users to specify a FASTA file containing non-target sequences for off-target testing. By default, it uses the human mitochondrial genome sequence.
+* **Primer secondary structure testing:** A testing module has been integrated to detect undesirable secondary structures, such as dimers and hairpins, which may reduce amplification efficiency.
+
+The detailed in-silico PCR performance and meta-information of every condidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory. Please see the parameters help message for detailed description.
 
 ## Reproduce results in the publication
 

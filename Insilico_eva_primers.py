@@ -685,7 +685,7 @@ def parse_args():
         "--sequencing_error",
         default="no",  # NextSeq_550
         type=str,
-        help="Platform error to choose.",
+        help="Platform on which to simulate the sequencing error.",
     )
     parser.add_argument("--K", type=int, help="The permitted mismatch numbers.")
     parser.add_argument(

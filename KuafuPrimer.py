@@ -12,6 +12,11 @@ from Bio import SeqIO
 from tqdm import tqdm
 from KuafuPrimerFuncs import *
 
+__author__ = "Haoyu Zhang"
+__copyright__ = "Copyright (c) 2024 Zhulab"
+__license__ = "The MIT License (MIT)"
+__version__ = "1.0"
+
 
 def blast_to_silvaRef(input_fna, output_txt):
     # [deplicated] use the abundance table as the input now.

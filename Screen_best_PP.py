@@ -290,7 +290,7 @@ def parse_args():
         description="Screen the optimal primer for specific environment."
     )
     parser.add_argument(
-        "--pcr_dir", type=str, help="Directory to the in-silico PCR res."
+        "--pcr_dir", type=str, help="directory to the in-silico PCR res"
     )
     parser.add_argument("--rk_by", type=str, help=".")
     parser.add_argument("--ge_seq_num_cutoff", type=int, default=10, help=".")
@@ -299,8 +299,8 @@ def parse_args():
     )  # select or neglect id list
     
     # params for offTarget_amplicon_check
-    parser.add_argument("--offTarget_fasta", type=str, default="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta", help=".")
-    parser.add_argument("--permitted_offTarget_mismatch", type=int, default=3, help=".")
+    parser.add_argument("--offTarget_fasta", type=str, default="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta", help="The non-target sequences used to evaluate the off-target performance of primers")
+    parser.add_argument("--permitted_offTarget_mismatch", type=int, default=3, help="The permitted mismatch number for off-target evaluation")
 
     return parser.parse_args()
 
