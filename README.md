@@ -227,7 +227,7 @@ python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/
 
 There will be two files in the output directory: `DeepAnno16_running_time.txt` records the running time of this procedure, `demo_output.csv` is the DeepAnno16 output file.
 
-> If you want to design primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the DeepAnno16 module to demarcate your sequences and afterwards run the design and in-silico PCR procedures **(TODO)**
+> If you want to design primer pairs using 16s rRNA gene sequences directly sequenced from the studied ecosystem (which may be absent from the SILVA dataset), you could run the DeepAnno16 module to demarcate your sequences and afterwards run the design and in-silico PCR procedures.
 
 ## Citation
 
