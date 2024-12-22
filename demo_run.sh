@@ -18,13 +18,13 @@ target_vs='v3v4;v4v5;'
 k_num=3
 demo_PCR_output=output/demo_PCR_output_accurate
 
-# python Insilico_eva_primers.py --envi_forEva $demo_design_output'/samples_abundanceTab_clean.csv' \
-#     --primers_forEva $demo_design_output';' \
-#     --target_vs $target_vs \
-#     --K $k_num \
-#     --output $demo_PCR_output \
-#     --num_condidate_pris 3 \
-#     --very_fast
+python Insilico_eva_primers.py --envi_forEva $demo_design_output'/samples_abundanceTab_clean.csv' \
+    --primers_forEva $demo_design_output';' \
+    --target_vs $target_vs \
+    --K $k_num \
+    --output $demo_PCR_output \
+    --num_condidate_pris 3 \
+    --very_fast
 
 demo_PCR_output=$demo_PCR_output'_K'$k_num
 

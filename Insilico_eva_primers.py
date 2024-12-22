@@ -736,7 +736,7 @@ def parse_args():
         help=".",
     )
 
-    parser.add_argument("--thread", type=int, default=10, help="Parallel running.")
+    parser.add_argument("--thread", type=int, default=8, help="Parallel running.")
 
     return parser.parse_args()
 

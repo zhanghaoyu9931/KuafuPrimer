@@ -15,7 +15,7 @@ from common_utils import *
 
 #### 用到的一些funcs
 super_conserve_pos_cutoff = 0.995
-possible_conserve_pos_cutoff = 0.98  #
+possible_conserve_pos_cutoff = 0.98  # TODO: set small for v1 and v9 region
 degebase_cutoff = 0.001  # 大于多少频率的碱基纳入degebase的考虑范围
 cov_k_by = 0
 
@@ -122,7 +122,7 @@ def parse_pcr_ali_res_singlePri_haoyu(
                 )
                 return ref_seq_
         except:
-            print("bbbbbbb")
+            # print("bbbbbbb") # for debug
             return ""
 
     blast_df["ref_seq"] = blast_df.apply(lambda x: get_ref_atgc(x), axis=1)
@@ -580,6 +580,9 @@ def design_primer(
     target_id = target_vs + "_target"
     target_v_root = os.path.join(f"{res_root}/{microbiota_target}", target_vs)
     os.makedirs(target_v_root, exist_ok=True)
+    if os.path.exists(os.path.join(target_v_root, 'reverse_primer.csv')):
+        # already have the primer designed, skip to save time
+        return 1
 
     target_vs = target_vs.split("v")[1:]
     target_vs = [int(x) for x in target_vs]

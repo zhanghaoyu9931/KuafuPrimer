@@ -300,7 +300,7 @@ def parse_args():
     
     # params for offTarget_amplicon_check
     parser.add_argument("--offTarget_fasta", type=str, default="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta", help="The non-target sequences used to evaluate the off-target performance of primers")
-    parser.add_argument("--permitted_offTarget_mismatch", type=int, default=3, help="The permitted mismatch number for off-target evaluation")
+    parser.add_argument("--permitted_offTarget_mismatch", type=int, default=0, help="The permitted mismatch number for off-target evaluation") # default mismatch number is set to 0
 
     return parser.parse_args()
 
