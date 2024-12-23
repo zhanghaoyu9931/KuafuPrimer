@@ -1,6 +1,7 @@
 import os
 import random
 import pandas as pd
+from tqdm import tqdm
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
@@ -341,14 +342,14 @@ if __name__ == "__main__":
     # test of off-target amplification check function
     
     off_target_test_df = []
-    # offTarget_fasta="Model_data/OffTarget_amplicon_check/MITOBANK_6w.fasta" # 6w human mitochondria seqs
+    offTarget_fasta="Model_data/OffTarget_amplicon_check/MITOBANK_6w.fasta" # 6w human mitochondria seqs
     # offTarget_fasta = "Model_data/OffTarget_amplicon_check/offTarget_olive_seqs.fasta"  # plant chloroplast seqs
-    offTarget_fasta="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta" # human mitochondria seqs
+    # offTarget_fasta="Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta" # human mitochondria seqs
     
     uni_pris = pd.read_excel(
         "Model_data/OffTarget_amplicon_check/primers_offTarget_test.xlsx"
     )
-    for pri_i in range(0, uni_pris.shape[0]):
+    for pri_i in tqdm(range(0, uni_pris.shape[0])):
         pri_f, pri_r = uni_pris.loc[pri_i, ["forward_seq", "reverse_seq"]]
         pri_i_nm = uni_pris.loc[pri_i, "pri_nm"]
 
@@ -356,8 +357,8 @@ if __name__ == "__main__":
         offTarget_res, offTarget_detail = offTarget_amplicon_check(
             pri_f,
             pri_r,
-            permitted_mismatch=0, # 5 for mitochondria, 0 for chloroplast
-            stringent_mode=False, # True for mitochondria, False for chloroplast
+            permitted_mismatch=1, # 1 for mitochondria, 0 for chloroplast
+            stringent_mode=True, # True for mitochondria, False for chloroplast
             offTarget_fasta=offTarget_fasta,
             verbose=verbose,
         )
