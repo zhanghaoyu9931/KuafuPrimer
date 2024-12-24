@@ -13,19 +13,18 @@ from collections import Counter
 
 from common_utils import *
 
-#### 用到的一些funcs
+#### funcs
 super_conserve_pos_cutoff = 0.995
 possible_conserve_pos_cutoff = 0.98  # TODO: set small for v1 and v9 region
-degebase_cutoff = 0.001  # 大于多少频率的碱基纳入degebase的考虑范围
+degebase_cutoff = 0.001  # when the base frequency is higher than this, it will be considered as degebase
 cov_k_by = 0
 
 # atgc order table
 atgc_order = ["A", "T", "G", "C"]
 
 
-# 计算GC含量、Tm等
+# GC ratio and Tm calculation
 def TmGc(primer_atgc="AA"):
-    # 把其他dege的base换成一个普通base
     for dege_base, subs_nor_base in degenerate_base_table.items():
         subs_nor_base = subs_nor_base[0]
         primer_atgc = primer_atgc.replace(dege_base, subs_nor_base)
@@ -39,9 +38,9 @@ def TmGc(primer_atgc="AA"):
     return GC_ratio, Tm
 
 
-# 使用primer_match来计算primer能够match上的序列数目
+# using blast to do this
 def parse_pcr_ali_res_singlePri(fna_aligned):
-    # 这个函数解析match后的结果
+    # parse the alignment result
     res_df = []
     recs = SeqIO.parse(fna_aligned, "fasta")
     for rec in recs:
@@ -57,17 +56,14 @@ def parse_pcr_ali_res_singlePri(fna_aligned):
             "pcr_end": -1,
         }
         res_df.append(res_now)
-    res_df = pd.DataFrame(res_df)  # 保留id信息是为了后续需要做genus的匹配做准备
+    res_df = pd.DataFrame(res_df) 
     return res_df
 
 
 def parse_pcr_ali_res_singlePri_haoyu(
     fna_aligned, K=3, pri_atgc="GTGTAGCGGTGAAATGCKTA", ref_fa=None, forward_reverse=""
 ):
-    # 这个函数解析blast之后的结果
-    # 读取blast结果，同时确认是否能够amplicon
-    # K: 允许的错配数量，但是不能简单用blastn结果，因为有兼并碱基
-    # id没有具体意义，不是silva-id，只是1-n编号
+    # read the blast result and get the in-silico amplicon
     recs = SeqIO.parse(ref_fa, "fasta")
     recs = {str(x.id): str(x.seq) for x in recs}
 
@@ -85,18 +81,18 @@ def parse_pcr_ali_res_singlePri_haoyu(
     blast_df.columns = index_line
     blast_df = blast_df.apply(pd.to_numeric, errors="ignore")
 
-    # 进行amplicon与否的几个条件筛选
-    # 1.不允许gap
+    # requirements for successful amplicon
+    # 1.no gap opens
     blast_df = blast_df[blast_df["gap_opens"] < 1].reset_index(drop=True)
-    # 2.覆盖引物全长: 1226放松一些，最多有5个少的alignment
+    # 2.alignment length is enough
     blast_df = blast_df[
         blast_df["alignment_length"].apply(lambda x: x >= len(pri_atgc) - 5)
     ]
-    # 3.拿出引物序列和参考序列
-    blast_df["pri_seq"] = blast_df.apply(lambda x: pri_atgc, axis=1)  # 无论如何都是引物全长
+    # 3.get the ref and primer sequence
+    blast_df["pri_seq"] = blast_df.apply(lambda x: pri_atgc, axis=1)
 
     def get_ref_atgc(x):
-        # 注意现在有可能q的start-end覆盖不住
+        # TODO: some pri-ref maybe align in reverse direction (need to check)
         if x["subject_acc.ver"] not in recs:
             print(x["subject_acc.ver"])
             return "".join(["A"] * len(pri_atgc))
@@ -126,10 +122,10 @@ def parse_pcr_ali_res_singlePri_haoyu(
             return ""
 
     blast_df["ref_seq"] = blast_df.apply(lambda x: get_ref_atgc(x), axis=1)
-    # 4.计算amplicon成功的概率
+    # 4.possibility of sucessful amplicon
     blast_df = blast_df.loc[
         blast_df.groupby(["query_acc.ver", "subject_acc.ver"])["evalue"].idxmin(),
-    ]  # 去除重复
+    ]  # de-duplicate
     blast_df.reset_index(inplace=True, drop=True)
 
     def get_amplicon_info(x):
@@ -145,7 +141,7 @@ def parse_pcr_ali_res_singlePri_haoyu(
         bind_p = primer_binding_probability(
             x.loc[0, "pri_seq"], x.loc[0, "ref_seq"], K=K
         )
-        # 0102：加入Tm计算的code
+        # Tm calculation
         Tm_gc = Tm_GCcal(x.loc[0, "pri_seq"], x.loc[0, "ref_seq"])
         amplicon_info["bind_p"] = bind_p
         amplicon_info["Tm_gc_cal"] = Tm_gc
@@ -175,11 +171,11 @@ def get_single_pri_match_num(
                 f"primer_match -i {ref_fa} -p {pri_atgc} -o {output} -r -K {K} -3 3"
             )
             os.system(primer_match_cmd)
-            # 读取结果
+            
             res_df = parse_pcr_ali_res_singlePri(output)
             return_info[f"cov_num_k_{K}"] = res_df.shape[0]
         elif pri_bind_method == "haoyu":
-            # todo: 修改为使用blast然后加入primer bind的准确率
+            # using blast to do in-silico PCR (by default)
             selectedGenus_fa_ncbidb = ref_fa.replace(".fasta", "_bladb")
             if not os.path.exists(selectedGenus_fa_ncbidb + ".nin"):
                 os.system(
@@ -187,7 +183,7 @@ def get_single_pri_match_num(
                 )
             rand_label = random.randint(9931, 99419)
             while os.path.exists(f"./testPrimer{rand_label}.txt"):
-                # 避免出现和其他文件冲突的情况
+                # avoid the same label
                 rand_label = random.randint(9931, 99419)
             primer_txt = f"./testPrimer{rand_label}.txt"
             with open(primer_txt, "w") as f:
@@ -210,43 +206,42 @@ def get_single_pri_match_num(
                 res_df["Tm_gc_cal"].fillna(0, inplace=True)
                 return_info[f"Tm_cut"] = res_df[res_df["Tm_gc_cal"] >= 55].shape[
                     0
-                ]  # 0102: 加入根据Tm计算的方式
+                ]
             except:
                 return_info[f"Tm_cut"] = 0
 
     return return_info
 
 
-# 主要设计primer的函数
+# func to design primer from MSA file
 def primer_design_from_MAS(
     mas_fna="designTool/gut/v3v4/forward_conserved_afterMuscle.fasta",
-    degebase_cutoff=0.01,  # 超过多少频率的base会被考虑到degebase里面；太低频率的认为是噪声
-    deletion_cutoff=0.99,  #
-    mismatch_cutoff=0.99,  # 小于这个阈值认为是mismatch
-    primer_lens_list=[20],  # primer的长度允许区间
+    degebase_cutoff=0.01,  
+    deletion_cutoff=0.99,  
+    mismatch_cutoff=0.99,  
+    primer_lens_list=[20],  # primer length
     forward_reverse="forward",
-    step_search=1,  # 1230: 加速搜索，扩大范围
+    step_search=1,  # search step
 ):
     recs = SeqIO.parse(mas_fna, "fasta")
     seqs_np = []
     for rec in recs:
         seq_now = str(rec.seq)
-        # 把其他dege的base换成一个普通base
         for dege_base, subs_nor_base in degenerate_base_table.items():
             subs_nor_base = subs_nor_base[
                 0
-            ]  # 1219：这部分因为使用的是SILVA中的参考序列，这种dege base比例本身不高，参考师兄们的说法就处理成第一个base就行
+            ]  # simply replace the degebase to the first candidate base
             seq_now = seq_now.replace(dege_base, subs_nor_base)
         seqs_np.append(list(seq_now))
     seqs_np = np.array(seqs_np)
 
-    # 统计每个位点的atgc分布情况
-    total_seq_num = seqs_np.shape[0]  # 总共有多少条序列参与了引物设计
+    # distribution of ATGC at each position
+    total_seq_num = seqs_np.shape[0]  # total number of sequences
     pos_conserved = [{"A": -1, "T": -1, "G": -1, "C": -1, "-": -1}]
     for i in range(seqs_np.shape[1]):
         seqs_this_pos = list(seqs_np[:, i])
         if forward_reverse == "reverse":
-            # 找到其互补链
+            # supplementary for reverse primer
             seqs_this_pos = [atgc_to_complement[x] for x in seqs_this_pos]
 
         atgc_cnt = Counter(seqs_this_pos)
@@ -256,18 +251,17 @@ def primer_design_from_MAS(
     pos_conserved = pos_conserved.iloc[1:, :]
     pos_conserved.reset_index(inplace=True, drop=True)
 
-    # 给每一个位点一个保守还是潜在degenerate的label
-    # 1231：进行修改以更好地符合
+    # get the label of each position (candidate conserved or degebase)
     def pos_conserve_label(atgc_freq=[], degebase_cutoff=0.1, deletion_cutoff=0.98):
         atgc_poss = [x / sum(atgc_freq) for x in atgc_freq]
-        # 第一个判断条件，是否可能是保守位点或者degenerate位点
-        if atgc_poss[-1] > 0.05:  # 考虑改成--0.001 or 0.01（有必要的）
+        # if conserved or candidate degebase
+        if atgc_poss[-1] > 0.05:  # candidate (0.01 - 0.001)
             if atgc_poss[-1] > deletion_cutoff:
                 return "deletion_couldDrop", "-", max(atgc_poss), "-", max(atgc_poss)
             else:
                 return "deletion_soMuch", "-", max(atgc_poss), "-", max(atgc_poss)
         if max(atgc_poss) > super_conserve_pos_cutoff:
-            # 这边是超级保守的-0.995以上
+            # super conserved
             return (
                 "super_conserve_pos",
                 atgc_order[atgc_poss.index(max(atgc_poss))],
@@ -276,7 +270,7 @@ def primer_design_from_MAS(
                 max(atgc_poss),
             )
 
-        # 创建degenerate base
+        # candidate degenerate base
         obvious_base_type = []
         dege_bases_freqSum = 0.0
         for i, atgc in enumerate(atgc_order):
@@ -298,7 +292,7 @@ def primer_design_from_MAS(
                 dege_bases_freqSum,
                 atgc_order[
                     atgc_poss.index(max(atgc_poss))
-                ],  # 主要是为了degenerate太多的时候选择性地不dege
+                ],  # the most frequent base except degebase
                 max(atgc_poss),
             )
         else:
@@ -331,11 +325,11 @@ def primer_design_from_MAS(
     pos_conserved.to_csv(mas_fna.replace("_afterMuscle.fasta", ".csv"), index=False)
     print(f"All position after alignment: {pos_conserved.shape}")
 
-    # 找到可能的primer序列
-    # 首先清除超过99%都是-的position
+    # find the potential primers
+    # drop the deletion_couldDrop bases
     pos_conserved = pos_conserved[
         pos_conserved["pos_type"] != "deletion_couldDrop"
-    ]  # drop 掉很多deletion的序列
+    ]  # drop base of deletion
     print(f"After drop - positon: {pos_conserved.shape}")
     pos_conserved.reset_index(inplace=True, drop=True)
 
@@ -343,26 +337,25 @@ def primer_design_from_MAS(
     for primer_lens in primer_lens_list:
         for start_pos in tqdm(range(
             0, pos_conserved.shape[0] + 1 - primer_lens, step_search
-        )):  # 1230: step_search加速搜索
+        )):  # step_search to speed up
             end_pos = start_pos + primer_lens
             primer_now = pos_conserved.iloc[start_pos:end_pos, :].copy()
             primer_now.reset_index(inplace=True, drop=True)
-            ## 接下来进行一些筛选条件，只有全部通过的才能作为可选primer
-            # 1. 不能包含过多的-
+            ## constraints for appropriate primer 
+            # 1. no -
             if "deletion_soMuch" in list(primer_now["pos_type"]):
                 continue
-            # 2. 包含少于等于3个degebase: 20240123修改--头4个和最后4个位点都不允许有degenerate base
+            # 2. <= 3 degebase, and no degebase at both ends
             for ii in range(len(primer_now) - 3, len(primer_now)):
-                # 末尾3个位点不能有dege
+                # no degebase at the end
                 if primer_now.loc[ii, "pos_type"] == "possible_degebase_pos":
                     # if (
                     #     primer_now.loc[ii, "pos_base_freq_max_nodege"]
                     #     < possible_conserve_pos_cutoff
                     # ):
-                    #     # 太小了不允许退化
                     #     continue
 
-                    # 退化为普通位点
+                    # switch to normal base
                     primer_now.loc[ii, "pos_type"] = "possible_conserved_pos"
                     primer_now.loc[ii, "pos_base"] = primer_now.loc[
                         ii, "pos_base_nodege"
@@ -372,16 +365,15 @@ def primer_design_from_MAS(
                     ]
                     
             for ii in range(0, 3):
-                # 头3个位点不能有dege
+                # no degebase at the start
                 if primer_now.loc[ii, "pos_type"] == "possible_degebase_pos":
                     # if (
                     #     primer_now.loc[ii, "pos_base_freq_max_nodege"]
                     #     < possible_conserve_pos_cutoff
                     # ):
-                    #     # 太小了不允许退化
                     #     continue
 
-                    # 退化为普通位点
+                    # switch to normal base
                     primer_now.loc[ii, "pos_type"] = "possible_conserved_pos"
                     primer_now.loc[ii, "pos_base"] = primer_now.loc[
                         ii, "pos_base_nodege"
@@ -394,7 +386,6 @@ def primer_design_from_MAS(
             if "possible_degebase_pos" not in pos_type_summary:
                 pos_type_summary["possible_degebase_pos"] = 0
             if pos_type_summary["possible_degebase_pos"] > 3:
-                # 进行一些修补
                 dege_pos_rank = list(
                     primer_now[primer_now["pos_type"] == "possible_degebase_pos"]
                     .sort_values(by="pos_base_freq_max_nodege", ascending=False)
@@ -412,14 +403,14 @@ def primer_design_from_MAS(
                         dege_i, "pos_base_freq_max_nodege"
                     ]
                 # continue
-            # 3. 包含最多1个mismatch(除开degebase之外)
+            # 3. no more than 3 mismatch
             possibility_ls = list(primer_now["pos_base_freq_max"])
             mismatch = [x for x in possibility_ls if x < mismatch_cutoff]
-            if len(mismatch) > 3: # 0104: 1 -> 3，保留更多可能性
+            if len(mismatch) > 3:
                 continue
-            # 4. 按照GC含量、Tm来筛选，按照文章给定了筛选标准
+            # 4. Tm and GC ratio constraints
             if forward_reverse == "reverse":
-                # reverse需要反向
+                # reverse primer
                 primer_atgc = "".join(list(primer_now["pos_base"])[::-1])
             else:
                 primer_atgc = "".join(list(primer_now["pos_base"]))
@@ -429,7 +420,7 @@ def primer_design_from_MAS(
                 continue
             if Tm < 55 or Tm > 66:  #  65
                 continue
-            # 5. 直接判断seq与模板之间的cover情况，去掉3‘端附近3bp有mismatch的那些
+            # 5. get the in-silico PCR of the primer
             pri_cov_num_info = get_single_pri_match_num(
                 ref_fa=mas_fna.replace("_afterMuscle.fasta", ".fasta"),
                 pri_atgc=primer_atgc,
@@ -442,14 +433,13 @@ def primer_design_from_MAS(
             )
             for ky in pri_cov_num_info.keys():
                 pri_cov_num_info[ky] = pri_cov_num_info[ky] / total_seq_num
-            if pri_cov_num_info[f"cov_num_k_{cov_k_by}"] < 0.85:  # 1219: 修改为一个比较大的值了
-                # coverage 太小筛出
+            if pri_cov_num_info[f"cov_num_k_{cov_k_by}"] < 0.85:
+                # coverage is too low
                 continue
 
-            # 通过筛选之后的primer，获取结果
+            # get the start position of the primer on the reference
             primer_degenum = pos_type_summary["possible_degebase_pos"]
             primer_base_coverage_ave = np.mean(possibility_ls)
-            # 引物bind在Ecoli上的位点
             start_Ecoli = get_PP_position_Ecoli_K12(primer_atgc, primer_atgc)
 
             possible_primer_info_now = {
@@ -469,7 +459,7 @@ def primer_design_from_MAS(
     return potential_primers
 
 
-# 从seg信息生成
+# func to create fna file for primer design
 def creat_primer_fna(rna_seq, pos, id, des, fna_file):
     ## create a fna to store the sub-regions
     records = []
@@ -478,7 +468,7 @@ def creat_primer_fna(rna_seq, pos, id, des, fna_file):
     for i in range(min(len(rna_seq), 50000)):
         spe_id = id[i]
 
-        # Create records
+        # create records
         primer_seq = rna_seq[i]
         _from, _to = pos[i]  # [a, b, c, d]
 
@@ -505,7 +495,7 @@ def creat_primer_fna(rna_seq, pos, id, des, fna_file):
         if (l >= len_m - 3 * len_std) and (l <= len_m + 3 * len_std)
     ]
 
-    ## 生成fna
+    # write to fna file
     print(f"Get {len(records)} records.")
 
     SeqIO.write(records, fna_file + ".fasta", "fasta")
@@ -552,19 +542,19 @@ def design_primer(
     core_microbiota=[],
     target_vs="v3v3",
     res_root="/data1/hyzhang/Projects/16sDeepSeg_summary/Evi_specific_primers_database/Results",
-    num_every_spe=5000, # 考虑加入num_every_spe = 0.1这种
+    num_every_spe=5000,
     representative_seqs_pick_method="random",
     extend_bp_num=50,
-    deletion_cutoff=0.99,  # 下面是一些设计引物时候的参数
-    mismatch_cutoff=0.99,  # 1219：后面用的时候正常是0.85
+    deletion_cutoff=0.99,  
+    mismatch_cutoff=0.99,  # usually set to 0.9
     primer_lens_list=[20],
     taxo_df=None,
     SILVA_set_pred_16sDeepSeg=None,
-    rand_seed=None,  # 为了保证各个region设计的用的seqs一致（in-silico 1 genus验证）
-    rm_tmp_files=True, # 是否删除中间文件
-    step_search=1, # 默认每隔一个位置搜索一次，这样更细得到的候选引物更多
+    rand_seed=None,
+    rm_tmp_files=True, # if remove the temp files
+    step_search=1, # search step
 ):
-    # 20240103：如果输入num_every_spe < 1，按照每个genus取一定比例
+    # num_every_spe could be a ratio
     if num_every_spe < 1:
         ratio_every_spe = num_every_spe
     else:
@@ -573,7 +563,7 @@ def design_primer(
     
     # get core species
     core_microbiota = [x.strip().lower() for x in core_microbiota]
-    print(f"Environment has {len(core_microbiota)} genus.")
+    print(f"The target microbial community has {len(core_microbiota)} genus.")
 
     # extract corresponding v-regions and flanking conserved regions
     print("Target " + target_vs)
@@ -587,15 +577,15 @@ def design_primer(
     target_vs = target_vs.split("v")[1:]
     target_vs = [int(x) for x in target_vs]
 
-    # 用于设计forward and reverse primer的函数
-    def design_forwardOrReverse(target_v=3, fr="reverse", num_every_spe = 100, ratio_every_spe = None):  # 以设计v3v4为例子
+    # func to design forward or reverse primer
+    def design_forwardOrReverse(target_v=3, fr="reverse", num_every_spe = 100, ratio_every_spe = None):
         if fr == "forward":
             start_primer = f"v{target_v - 1}"
             end_primer = f"v{target_v}"
         else:
             start_primer = f"v{target_v}"
             end_primer = f"v{target_v + 1}"
-        ## 思路：提取出v3v4区域左右侧的保守区域，做MSA，之后去掉>3SD的那些序列
+        ## get the conserved region for MSA and primer design
         # scale = 1
         # extract regions
         start_pos, end_pos, ids, rna_seqs = [], [], [], []
@@ -604,17 +594,16 @@ def design_primer(
             if len(micro_genus.split()) > 1:
                 print(f"Maybe unusual genus name: {micro_genus}.")
 
-            # 找寻当前core genus的所属seqs
+            # get representative seqs for target genera
             taxo_df_micro_now = taxo_df[taxo_df["genus_name"] == micro_genus]
             if ratio_every_spe is not None:
-                # 0103：按照比例取一定的seqs
                 num_every_spe = int(ratio_every_spe * taxo_df_micro_now.shape[0])
                 
             if representative_seqs_pick_method == "lens":
-                # 按照长度排序取前几位
+                # select the longest seqs as representative
                 taxo_df_micro_now.sort_values(by="lens", ascending=False, inplace=True)
             else:
-                # 随机重新排列
+                # randomly select
                 if rand_seed is not None:
                     taxo_df_micro_now = taxo_df_micro_now.sample(
                         frac=1, random_state=rand_seed
@@ -626,21 +615,21 @@ def design_primer(
             taxo_df_micro_now = taxo_df_micro_now.iloc[:num_every_spe, :]  # 本来有+ 1删掉了
 
             micro_genus_id = list(
-                taxo_df_micro_now["silva_id"] # ["silva_id_wrong"] # 20240102: 修改为silva-id呢
-            )  # 使用的是wrong的id U -> T 
+                taxo_df_micro_now["silva_id"] # ["silva_id_wrong"]
+            )
             
             SILVA_set_pred_16sDeepSeg_t = SILVA_set_pred_16sDeepSeg[
-                SILVA_set_pred_16sDeepSeg["silva_id"].isin(micro_genus_id) # ["silva_id_wrong"] # 20240102: 修改为silva-id呢
+                SILVA_set_pred_16sDeepSeg["silva_id"].isin(micro_genus_id) # ["silva_id_wrong"]
             ]
             SILVA_set_pred_16sDeepSeg_t = shuffle(SILVA_set_pred_16sDeepSeg_t)
             SILVA_set_pred_16sDeepSeg_t.reset_index(inplace=True, drop=True)
             if SILVA_set_pred_16sDeepSeg_t.shape[0] < num_every_spe - 5:
-                # 1218：如果不够num_every_spe个，则取重复补全
+                # randomly sample with replacement
                 SILVA_set_pred_16sDeepSeg_t = SILVA_set_pred_16sDeepSeg_t.sample(
                     n=num_every_spe, replace=True
                 )
 
-            # 11.24: 没找到相应genus直接跳过
+            # not any representative seqs, continue
             if SILVA_set_pred_16sDeepSeg_t.shape[0] < 1:
                 continue
 
@@ -671,18 +660,18 @@ def design_primer(
                     ]
                 ]
 
-            ids += list(SILVA_set_pred_16sDeepSeg_t["silva_id"])[:num_every_spe] # ["silva_id_wrong"] # 20240102: 修改为silva-id呢
+            ids += list(SILVA_set_pred_16sDeepSeg_t["silva_id"])[:num_every_spe] # ["silva_id_wrong"]
             rna_seqs += list(SILVA_set_pred_16sDeepSeg_t["16s_rna"])[:num_every_spe]
 
-        print(num_every_spe, 'AAAAA')
+        # print(num_every_spe, 'AAAAA')
         with open(os.path.join(target_v_root, "silva_id_used.txt"), "w") as f:
-            # 0102: 保存一下是用了哪些silva id的序列来操作
+            # save the used silva_id
             f.write("\n".join(ids))
 
-        # 11.5: 添加往外扩增一定bp的操作
+        # extend the conserved region
         extend_bp_num_fr = extend_bp_num
         if start_primer == "v0" or end_primer == "v10":
-            # 如果是forward的v0，则右侧extend两倍的bp；若是reverse的v9，亦然
+            # for v1 and v9 region
             extend_bp_num_fr = 2 * extend_bp_num_fr
         pos_info = [
             [

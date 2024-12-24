@@ -10,7 +10,7 @@ from Bio import SeqIO
 from common_utils import *
 
 
-# dimer和hairpin检查
+# check dimer and hairpin
 def check_dimer_hairpin(
     f_atgc, r_atgc, DimerAndHairpin_exam_root="./DimerAndHairpin_exam"
 ):
@@ -50,7 +50,7 @@ def check_dimer_hairpin(
     return dimer_flag, hairpin_flag
 
 
-## 主要函数
+## main function
 def screen_PPs_main(
     pcr_dir="",
     rk_by="Genus_accuracy",
@@ -60,7 +60,6 @@ def screen_PPs_main(
     offTarget_fasta='Model_data/OffTarget_amplicon_check/offTarget_reference_seqs.fasta',
     permitted_offTarget_mismatch=5,
 ):
-    # 先跑这部分为每个环境跑一个总体结果，以及跑一个大的结果出来
     bacdive_designed_res = []
     # for rk_by in ['Pri_amp_eff', 'Genus_accuracy']:
 
@@ -77,7 +76,7 @@ def screen_PPs_main(
                     df_resInfo_vv, columns=["pri_nm", "pri_pair"]
                 )
                 df_resInfo_vv["pri_vregion"] = [vv] * df_resInfo_vv.shape[0]
-                # 1106: 获取primer pair的target position信息
+                # target position in E.coli
                 pos_df = {
                     "forward_start": [],
                     "reverse_start": [],
@@ -116,12 +115,12 @@ def screen_PPs_main(
             except:
                 continue
 
-            # 1123: 规范化Genus名称
+            # clear the genus name
             df_t["Genus"] = df_t["Genus"].apply(lambda x: ("_".join(x.split())).lower())
             unGenus_nms = ["unknown", "uncultured", "uncultured_bacterium"]
             df_t["Genus"] = df_t["Genus"].apply(
                 lambda x: "unknown" if (x in unGenus_nms) else x
-            )  # 把未知物种的几个条目整合一下都叫unknown
+            )  # named as unknown
 
             df_t["Genus_pred"] = (
                 df_t["Genus_pred"]
@@ -133,7 +132,7 @@ def screen_PPs_main(
             tax_num = [""] * len(taxa_all)
             for ge_i, tax in enumerate(taxa_all):
                 df_this_tax = df_t[df_t["Genus"] == tax]
-                # 20240103: 加入筛选，在或者不在某个list中的ids
+                # selection and neglect of silva ids
                 if ids_select_list is not None:
                     df_this_tax = df_this_tax[
                         df_this_tax["silva_id"].isin(ids_select_list)
@@ -148,7 +147,6 @@ def screen_PPs_main(
                 tax_num[ge_i] = reads_all_n
                 try:
                     if rk_by == "Pri_amp_eff":
-                        # 只计算amp efficient
                         eff = (
                             df_this_tax[df_this_tax["amplicon_size"] > 10].shape[0]
                             / reads_all_n
@@ -163,11 +161,11 @@ def screen_PPs_main(
                         # eff_amplicon = (
                         #     df_this_tax[df_this_tax["amplicon_size"] > 10].shape[0]
                         #     / reads_all_n
-                        # )  # 也一并保存了
+                        # )
                 except:
                     eff = -1.0
                 pri_eff_res.append(eff)
-            df_this_evi[pri_nm[:-8]] = pri_eff_res  # 删除_res.csv
+            df_this_evi[pri_nm[:-8]] = pri_eff_res  # drop the "_res.csv"
 
     df_this_evi["tax_num"] = tax_num
     df_this_evi["tax_name"] = taxa_all
@@ -181,7 +179,7 @@ def screen_PPs_main(
         df_this_evi.to_csv(os.path.join(pcr_dir, f"detail_{rk_by}.csv"), index=False)
 
     df_this_evi_pri_info = pd.concat(df_this_evi_pri_info, axis=0)
-    # 输出最优的引物组合
+    # best primer pair
     df_this_evi = df_this_evi[df_this_evi["tax_num"] > ge_seq_num_cutoff].reset_index(
         drop=True
     )  # remove genus with too few seqs
@@ -221,7 +219,7 @@ def screen_PPs_main(
             }
         )
 
-    # 保存metainfo table，把accuracy也加上并排序
+    # save the designed primer info and sort them by the taxonomic accuracy
     bacdive_designed_res = pd.DataFrame(bacdive_designed_res)
     df_this_evi_pri_info = pd.merge(
         df_this_evi_pri_info, bacdive_designed_res, on="pri_nm", how="left"

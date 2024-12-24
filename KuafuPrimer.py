@@ -191,7 +191,7 @@ def primer_design_main(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Design best primers for specific environment."
+        description="Design best primers for specific microbial community."
     )
     parser.add_argument("--input", type=str, help="The input tsv file.")
     parser.add_argument("--out_root", type=str, help="The output root.")
@@ -308,7 +308,7 @@ if __name__ == "__main__":
     SILVA_set_pred_16sDeepSeg = pd.merge(
         id_seqs_df, pred_16sDeepSeg_df, on="silva_id", how="inner"
     )
-    print(f"Total set has {SILVA_set_pred_16sDeepSeg.shape[0]} seqs.")
+    print(f"Total dataset for primer design has {SILVA_set_pred_16sDeepSeg.shape[0]} seqs.")
 
     ## running the main func ##
     start_time = datetime.datetime.now()
