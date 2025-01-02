@@ -235,4 +235,4 @@ KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers wi
 
 ## Contact
 
-If you have any questions, please don't hesitate to ask me: zhanghaoyu9931@pku.edu.cn or hqzhu@pku.edu.cn
+If you have any questions, please don't hesitate to ask me: hauserzhang@pku.edu.cn or hqzhu@pku.edu.cn
