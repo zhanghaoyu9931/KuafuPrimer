@@ -54,7 +54,7 @@ File tree:
    4. pip install -r requirements_pip.txt (or conda install --yes --file requirements_conda.txt)
    ```
 
-   Notably, we have used torch==1.12.0+cu113 for testing. Please refer to the [PyTorch oficial website](https://pytorch.org/get-started/previous-versions/) to choose the appropriate CUDA version or CPU version for installation.
+   Notably, we have used torch==1.12.0+cu113 for testing. Please refer to the [PyTorch official website](https://pytorch.org/get-started/previous-versions/) to choose the appropriate CUDA version or CPU version for installation.
 
 ###### Dependencies
 
@@ -72,6 +72,7 @@ There are some tool requirements before running the KuafuPrimer：
 3. [PrimerMatch](https://edwardslab.bmcb.georgetown.edu/software/PrimerMatch.html) (version == 1.0.0)
 4. [blast](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/) (version == 2.16.0+)
 5. [MFEprimer](https://github.com/quwubin/MFEprimer-3.0/releases) (version == 3.2.6)
+6. [usearch](https://drive5.com/usearch/) (version == v11.0.667_i86linux32)
 
 ## Quickstart:
 
@@ -79,47 +80,62 @@ There are some tool requirements before running the KuafuPrimer：
 
 To design the ecosystem specific primer pairs from the relevant genera profiling of the studied microbial communities, you need to provide a csv file containing the relevant genera profiling as `demo_input_KuafuPrimer_ge_profile.csv` and run:
 
-```
+```bash
 # set the input and output path
 demo_input=input/demo_input_KuafuPrimer_ge_profile.csv
 demo_design_output=output/demo_output_KuafuPrimer
 
 # run the program
 python KuafuPrimer.py \
-    --input $demo_input \ # Input file
-    --out_root $demo_design_output\ # Output dir
-    --input_type 'genera_profiling' \ # Input data type
-    --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \ # The target V-regions.
-    --extend_bp_num 50 \ # Number of extensive bp that will be included to design primer.
-    --num_every_spe 5 \ # Number of selected seqs for every genus.
-    --NGS_mode Single_end \ # The metagenomic data type (pair-end or single-end).
+    --input $demo_input \
+    --out_root $demo_design_output \
+    --input_type 'genera_profiling' \
+    --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \
+    --extend_bp_num 50 \
+    --num_every_spe 5 \
+    --NGS_mode Single_end
 ```
+
+**Parameters explanation:**
+- `--input`: Input file containing genera profiling
+- `--out_root`: Output directory for results
+- `--input_type`: Input data type (genera_profiling)
+- `--target_vs`: The target V-regions to design primers for
+- `--extend_bp_num`: Number of extensive bp that will be included to design primer
+- `--num_every_spe`: Number of selected seqs for every genus
+- `--NGS_mode`: The metagenomic data type (pair-end or single-end)
 
 Notably, the input relevant genera profiling file could be generated through the [pipeline](#Optional-functions) we used, or provided by users themselves. The designed primers targeting every candidate V-regions will be in the `$demo_output` directory.
 
 ###### In-silico PCR of the designed primer pairs and screen for the primer with minimal bias for the studied communities.
 
-To evaluate the perfromance of designed primer pairs by in-silico PCR and screen out the optimal primer pair for the studied ecosystem, run:
+To evaluate the performance of designed primer pairs by in-silico PCR and screen out the optimal primer pair for the studied ecosystem, run:
 
-```
+```bash
 # set the parameters
 demo_PCR_output=output/demo_PCR_output
 K_num=3
 
 # run the in-silico PCR program
 python Insilico_eva_primers.py \
-    --envi_forEva $demo_design_output'/samples_abundanceTab_clean.csv' \ # The abundance table of the target communities where the primer performance is to be evaluated.
-    --primers_forEva $demo_design_output\ # The designed primers to be evaluated.
-    --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \ # The target V-regions.
-    --K $K_num \ # The permitted mismatch numbers.
-    --output $demo_PCR_output \ # The output dir.
+    --envi_forEva $demo_design_output'/samples_abundanceTab_clean.csv' \
+    --primers_forEva $demo_design_output \
+    --target_vs 'v1v2;v1v3;v3v4;v4v4;v4v5;v6v8;v5v6;v5v7;v7v8' \
+    --K $K_num \
+    --output $demo_PCR_output
 
 # parse the in-silico PCR res and screen out the best primer pair
 python Screen_best_PP.py \
     --pcr_dir $demo_PCR_output'_K'$K_num \
     --rk_by Genus_accuracy
-
 ```
+
+**Parameters explanation:**
+- `--envi_forEva`: The abundance table of the target communities where the primer performance is to be evaluated
+- `--primers_forEva`: The designed primers to be evaluated
+- `--target_vs`: The target V-regions
+- `--K`: The permitted mismatch numbers
+- `--output`: The output directory
 
 The input for `envi_forEva` and `primers_forEva` is the output directory of the primer design  procedure. This program will output the designed primer pair with minimal primer bias specific for the target communities, the selected V-region and in-silico PCR accuracy of it:
 
@@ -133,7 +149,7 @@ It is worth noting that we provide additional support for in-silico PCR amplicon
 * **Off-Target testing:** The `--offTarget_fasta` parameter in the `Screen_best_PP.py` allows users to specify a FASTA file containing non-target sequences for off-target testing. By default, it uses the human mitochondrial genome sequence.
 * **Primer secondary structure testing:** A testing module has been integrated to detect undesirable secondary structures, such as dimers and hairpins, which may reduce amplification efficiency.
 
-The detailed in-silico PCR performance and meta-information of every condidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory. Please see the parameters help message for detailed description.
+The detailed in-silico PCR performance and meta-information of every candidate primer pair are recorded in `detail_Genus_accuracy.csv` and `pri_metainfo.csv` files within the `$demo_PCR_output'_K'$K_num` directory. Please see the parameters help message for detailed description.
 
 ## Reproduce results in the publication
 
@@ -160,7 +176,7 @@ Here we privide a pipeline to process metagenomic raw data, please feel free to 
 And some external databases need to be downloaded:
 
 1. Kraken databases
-   ```powershell
+   ```bash
    cd ./Metagenomic_preprocessing/
 
    ## build standard kraken2 database
@@ -186,10 +202,9 @@ And some external databases need to be downloaded:
    KRAKEN_DB=$DBNAME
    READ_LEN=150
    bracken-build -d ${KRAKEN_DB} -t 32 -l ${READ_LEN}
-
    ```
 2. Human reference database for bowtie2
-   ```powershell
+   ```bash
    cd ./Metagenomic_preprocessing/
 
    wget https://genome-idx.s3.amazonaws.com/bt/GRCh38_noalt_as.zip # download the zip file
@@ -199,17 +214,22 @@ And some external databases need to be downloaded:
 
 `./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
 
-```powershell
+**Parameters explanation:**
+- First parameter: directory of metagenomic files
+- Second & Third parameters: suffix of paired-end data files
+- Fourth parameter: id list file
+
+```bash
 cd ./Metagenomic_preprocessing/
 
 bash pipeline_metagenomic.sh \
-  ../input \ # directory of metagenomic files
-  .R1.raw.fastq.gz .R2.raw.fastq.gz \ # suffix of paired-end data
-  ../input/metagenomic_id_list.txt \ # id list
+  ../input \
+  .R1.raw.fastq.gz .R2.raw.fastq.gz \
+  ../input/metagenomic_id_list.txt
 
 python process_after_pipeline.py \
-  --metagenomic_dir ../input \ # directory of metagenomic files
-  --id_list ../input/metagenomic_id_list.txt \ # id list
+  --metagenomic_dir ../input \
+  --id_list ../input/metagenomic_id_list.txt
 ```
 
 This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance matrix of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps. There will be two types of abundance matrixes named as `merged_abun_table_ncbi.tsv` (classified by kraken with ncbi database) and `merged_abun_table.tsv` (classified by kraken with silva database), **and we recommend to use the `merged_abun_table_ncbi.tsv`.**
@@ -220,7 +240,7 @@ This pipeline will output the processed files of the metagenomic data in `./inpu
 2. Put the downloaded `model.pth` and `config.json` files in the `Model_data/DeepAnno16_publicated_model/` directory.
 3. Run DeepAnno16 to demarcate the 16S rRNA gene, and the input file must contain two columns named `id` and `16s_rna` to provide a unique id and nucleotide sequence for each 16S rRNA gene respectively (please refer to the example input file):
 
-```powershell
+```bash
 # Run DeepAnno16 to demarcate the example file.
 python DeepAnno16/module_output.py -c DeepAnno16/config_test.json -r Model_data/DeepAnno16_publicated_model/model.pth --input input/demo_input_DeepAnno16.csv --output output/demo_output_DeepAnno16.csv
 ```
@@ -231,7 +251,17 @@ There will be two files in the output directory: `DeepAnno16_running_time.txt` r
 
 ## Citation
 
-KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities
+If you use KuafuPrimer in your research, please cite:
+
+```bibtex
+@article{kuafuprimer2024,
+  title={KuafuPrimer: Machine learning facilitates the design of 16S rRNA gene primers with minimal bias in bacterial communities},
+  author={[Haoyu Zhang, Xiaoqing Jiang, et al.]},
+  journal={[]},
+  year={2025},
+  doi={}
+}
+```
 
 ## Contact
 
