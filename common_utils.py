@@ -27,6 +27,7 @@ degenerate_base_table = {
     "D": ["A", "G", "T"],
 }
 blast_db_temp_dir = "output/temp"  # temperate dir for blast db
+os.makedirs(blast_db_temp_dir, exist_ok=True)
 blastn_columns = [
     "query_acc.ver",
     "subject_acc.ver",
