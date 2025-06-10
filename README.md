@@ -214,11 +214,6 @@ And some external databases need to be downloaded:
 
 `./input/raw_seqs/example_1.fastq` and `./input/raw_seqs/example_2.fastq` are two mates of an example paired-end metagenomic data. And the metagenomic data ids to process should be recorded in `./input/metagenomic_id_list.txt`. To run the pipeline in paired-end mode, run:
 
-**Parameters explanation:**
-- First parameter: directory of metagenomic files
-- Second & Third parameters: suffix of paired-end data files
-- Fourth parameter: id list file
-
 ```bash
 cd ./Metagenomic_preprocessing/
 
@@ -231,6 +226,11 @@ python process_after_pipeline.py \
   --metagenomic_dir ../input \
   --id_list ../input/metagenomic_id_list.txt
 ```
+
+**Parameters explanation:**
+- First parameter: directory of metagenomic files
+- Second & Third parameters: suffix of paired-end data files
+- Fourth parameter: id list file
 
 This pipeline will output the processed files of the metagenomic data in `./input/` directory. The detailed result files for each sample will be saved in `./input/clean_reads/`. And the integrated abundance matrix of all samples will be saved in `./input/MetaAbun/`, which will be used as input profiles for the next steps. There will be two types of abundance matrixes named as `merged_abun_table_ncbi.tsv` (classified by kraken with ncbi database) and `merged_abun_table.tsv` (classified by kraken with silva database), **and we recommend to use the `merged_abun_table_ncbi.tsv`.**
 
